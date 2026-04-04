@@ -44,7 +44,7 @@ type BannerAuthUser = {
 const AUTH_SESSION_STORAGE_KEY = "cartevisite.auth.session.v1";
 
 const MAIN_NAV_LINKS = [
-  { label: "Publicite", href: "/#primary-ad" },
+  { label: "Publicite", href: "/#hero-media" },
   { label: "Recherche", href: "/#search" },
   { label: "Offres actives", href: "/#jobs" },
   { label: "Categories", href: "/#categories" },

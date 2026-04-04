@@ -182,7 +182,7 @@ const SECONDARY_ADS: SecondaryAd[] = [
   {
     title: "Video Branding",
     subtitle: "Faites passer votre image de marque au niveau superieur.",
-    link: "#primary-ad",
+    link: "#hero-media",
     tag: "Media",
     imageUrl:
       "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1200&q=80",
@@ -526,7 +526,7 @@ export default function HomePage() {
       <SiteBanner />
 
       <main id="top" className="mx-auto flex w-full max-w-[92rem] flex-col gap-12 px-[var(--page-gutter)] py-8 md:gap-14 md:py-12">
-        <section id="primary-ad" className="reveal-up space-y-5">
+        <section id="hero-media" className="reveal-up space-y-5">
           <div className="overflow-hidden rounded-3xl border border-[#223058] bg-[#0b1326] shadow-[0_20px_50px_rgba(3,6,20,0.55)]">
             <div className="relative aspect-[21/8] min-h-[200px] w-full md:min-h-[320px]">
               <video
@@ -575,8 +575,8 @@ export default function HomePage() {
             </span>
           </div>
 
-          <div className="ad-marquee">
-            <div className="ad-marquee-track">
+          <div className="media-scroller">
+            <div className="media-scroller-track">
               {secondaryAdsLoop.map((ad, index) => (
                 <a
                   key={`${ad.title}-${index}`}

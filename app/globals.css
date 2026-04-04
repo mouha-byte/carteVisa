@@ -88,20 +88,20 @@ body {
   }
 }
 
-.ad-marquee {
+.media-scroller {
   overflow: hidden;
   position: relative;
   mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
   -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
 }
 
-.ad-marquee-track {
+.media-scroller-track {
   display: flex;
   width: max-content;
   animation: marquee-x 28s linear infinite;
 }
 
-.ad-marquee:hover .ad-marquee-track {
+.media-scroller:hover .media-scroller-track {
   animation-play-state: paused;
 }
 
