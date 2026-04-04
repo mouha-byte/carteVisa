@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, Suspense, useMemo, useState } from "react";
 
 import { SiteBanner } from "@/app/ui/site-banner";
 
@@ -64,7 +64,7 @@ function toStoredSession(payload: SupabaseAuthTokenResponse): StoredAuthSession 
   };
 }
 
-export default function LoginPage() {
+function LoginPageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -216,5 +216,26 @@ export default function LoginPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+function LoginPageFallback() {
+  return (
+    <div className="min-h-screen bg-[#05070d] text-slate-100">
+      <SiteBanner />
+      <main className="mx-auto flex w-full max-w-[92rem] items-center justify-center px-[var(--page-gutter)] py-10 md:py-14">
+        <section className="w-full max-w-xl rounded-3xl border border-[#223059] bg-[#0b1428] p-6 md:p-8">
+          <p className="text-sm text-slate-300">Chargement...</p>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginPageFallback />}>
+      <LoginPageContent />
+    </Suspense>
   );
 }

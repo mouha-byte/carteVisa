@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, Suspense, useMemo, useState } from "react";
 
 import { SiteBanner } from "@/app/ui/site-banner";
 
@@ -157,7 +157,7 @@ async function parseApiPayload(response: Response): Promise<unknown> {
   }
 }
 
-export default function ContactPage() {
+function ContactPageContent() {
   const searchParams = useSearchParams();
   const jobOfferId = (searchParams.get("job") ?? "").trim();
   const companySlug = (searchParams.get("company") ?? "").trim();
@@ -501,5 +501,26 @@ export default function ContactPage() {
         </section>
       </main>
     </div>
+  );
+}
+
+function ContactPageFallback() {
+  return (
+    <div className="min-h-screen bg-[#05070d] text-slate-100">
+      <SiteBanner />
+      <main className="mx-auto w-full max-w-[92rem] px-[var(--page-gutter)] py-8 md:py-12">
+        <section className="rounded-3xl border border-[#223059] bg-[#0a1120] p-6 md:p-10">
+          <p className="text-sm text-slate-300">Chargement...</p>
+        </section>
+      </main>
+    </div>
+  );
+}
+
+export default function ContactPage() {
+  return (
+    <Suspense fallback={<ContactPageFallback />}>
+      <ContactPageContent />
+    </Suspense>
   );
 }
