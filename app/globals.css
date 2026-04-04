@@ -1,26 +1,138 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #05070d;
+  --foreground: #f8fafc;
+  --page-gutter: clamp(0.35rem, 1vw, 0.9rem);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-sora);
+  --font-mono: var(--font-ibm-plex-mono);
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #05070d;
+    --foreground: #f8fafc;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sora), "Segoe UI", sans-serif;
+  line-height: 1.45;
+}
+
+.headline-special {
+  font-family: var(--font-sora), "Segoe UI", sans-serif;
+  letter-spacing: 0.01em;
+  text-transform: none;
+}
+
+.headline-script {
+  font-family: "Priming Outlined Script Pro", "Segoe Script", "Brush Script MT", cursive;
+  letter-spacing: 0.01em;
+  line-height: 1.05;
+}
+
+.headline-accent {
+  background: linear-gradient(95deg, #f8fafc 0%, #fde68a 52%, #f8fafc 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+@keyframes reveal-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.reveal-up {
+  animation: reveal-up 720ms cubic-bezier(0.2, 0.75, 0.2, 1) both;
+}
+
+.reveal-delay-1 {
+  animation-delay: 120ms;
+}
+
+.reveal-delay-2 {
+  animation-delay: 220ms;
+}
+
+.reveal-delay-3 {
+  animation-delay: 320ms;
+}
+
+.reveal-delay-4 {
+  animation-delay: 420ms;
+}
+
+@keyframes marquee-x {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ad-marquee {
+  overflow: hidden;
+  position: relative;
+  mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%);
+}
+
+.ad-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: marquee-x 28s linear infinite;
+}
+
+.ad-marquee:hover .ad-marquee-track {
+  animation-play-state: paused;
+}
+
+@keyframes back-to-top-glow {
+  0%,
+  100% {
+    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.35);
+  }
+
+  50% {
+    box-shadow: 0 14px 28px rgba(234, 179, 8, 0.32);
+  }
+}
+
+.back-to-top-anim {
+  animation: back-to-top-glow 1.8s ease-in-out infinite;
+}
+
+@keyframes cta-yellow-pulse {
+  0%,
+  100% {
+    transform: translateY(0);
+    box-shadow: 0 8px 18px rgba(234, 179, 8, 0.22);
+  }
+
+  50% {
+    transform: translateY(-1px);
+    box-shadow: 0 12px 24px rgba(234, 179, 8, 0.34);
+  }
+}
+
+.cta-yellow-anim {
+  animation: cta-yellow-pulse 1.7s ease-in-out infinite;
 }
