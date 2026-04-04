@@ -19,6 +19,14 @@ type SupabaseAuthTokenResponse = {
   msg?: string;
 };
 
+type SupabaseAuthUser = {
+  id: string;
+};
+
+type SupabaseProfileRow = {
+  role: string | null;
+};
+
 type StoredAuthSession = {
   accessToken: string;
   refreshToken: string | null;
@@ -62,6 +70,71 @@ function toStoredSession(payload: SupabaseAuthTokenResponse): StoredAuthSession 
         ? Date.now() + payload.expires_in * 1000
         : null,
   };
+}
+
+async function resolvePostLoginPath(
+  config: SupabasePublicConfig,
+  session: StoredAuthSession,
+  nextPath: string
+): Promise<string> {
+  if (nextPath !== "/") {
+    return nextPath;
+  }
+
+  const authResponse = await fetch(`${config.supabaseUrl}/auth/v1/user`, {
+    method: "GET",
+    headers: {
+      apikey: config.anonKey,
+      Authorization: `Bearer ${session.accessToken}`,
+    },
+    cache: "no-store",
+  });
+
+  if (!authResponse.ok) {
+    return "/";
+  }
+
+  const authUser = (await authResponse.json()) as SupabaseAuthUser;
+  if (!authUser || typeof authUser.id !== "string") {
+    return "/";
+  }
+
+  const profileParams = new URLSearchParams({
+    select: "role",
+    id: `eq.${authUser.id}`,
+    limit: "1",
+  });
+
+  const profileResponse = await fetch(
+    `${config.supabaseUrl}/rest/v1/profiles?${profileParams.toString()}`,
+    {
+      method: "GET",
+      headers: {
+        apikey: config.anonKey,
+        Authorization: `Bearer ${session.accessToken}`,
+      },
+      cache: "no-store",
+    }
+  );
+
+  if (!profileResponse.ok) {
+    return "/";
+  }
+
+  const profilePayload = (await profileResponse.json()) as SupabaseProfileRow[];
+  const role = Array.isArray(profilePayload)
+    ? profilePayload[0]?.role ?? null
+    : null;
+
+  if (role === "super_admin") {
+    return "/espace-admin";
+  }
+
+  if (role === "entreprise") {
+    return "/espace-entreprise";
+  }
+
+  return "/";
 }
 
 function LoginPageContent() {
@@ -135,8 +208,10 @@ function LoginPageContent() {
       setFeedbackType("ok");
       setFeedback("Connexion reussie. Redirection...");
 
+      const destination = await resolvePostLoginPath(config, session, nextPath);
+
       window.setTimeout(() => {
-        router.push(nextPath);
+        router.push(destination);
       }, 300);
     } catch {
       setFeedbackType("error");

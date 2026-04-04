@@ -339,76 +339,102 @@ export function SiteBanner() {
 
   return (
     <header className="sticky top-0 z-50 border-b border-[#16203a] bg-[#05070d]/95 backdrop-blur">
-      <nav className="mx-auto flex w-full max-w-[92rem] items-center justify-between gap-4 px-[var(--page-gutter)] py-3">
-        <div className="flex items-center gap-3">
-          <Link href="/" className="flex items-center gap-3">
+      <nav className="mx-auto w-full max-w-[92rem] px-[var(--page-gutter)] py-4 md:py-5">
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-4">
             <Image
               src="/cartevisite-logo.png"
               alt="Logo CarteVisite"
               width={72}
               height={72}
-              className="h-16 w-16 rounded-lg border border-[#2a3a68] bg-[#0b1222] p-1"
+              className="h-16 w-16 rounded-xl border border-[#2a3a68] bg-[#0b1222] p-1"
             />
             <div>
-              <span className="headline-script text-2xl text-white md:text-3xl">CarteVisite</span>
-              <span className="hidden text-xs uppercase tracking-[0.15em] text-slate-400 md:block">
+              <span className="headline-script block text-[2rem] leading-none text-white">
+                CarteVisite
+              </span>
+              <span className="mt-2 block text-xs uppercase tracking-[0.15em] text-slate-400">
                 Publications et visibilite d entreprises
               </span>
             </div>
           </Link>
-        </div>
 
-        <div className="hidden items-center gap-5 text-sm font-medium text-slate-300 md:flex">
-          {MAIN_NAV_LINKS.map((item) => (
-            <Link key={item.label} href={item.href} className="hover:text-yellow-300">
-              {item.label}
-            </Link>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Link
-            href="/create-site"
-            className="cta-yellow-anim rounded-full border border-yellow-500 bg-yellow-500 px-4 py-2 text-sm font-semibold text-[#05070d] transition hover:bg-yellow-400"
-          >
-            Creer mon site web
-          </Link>
-          <a
-            href="https://youtube.com"
-            target="_blank"
-            rel="noreferrer"
-            className="cta-yellow-anim rounded-full border border-yellow-500 bg-yellow-500 px-4 py-2 text-sm font-semibold text-[#05070d] transition hover:bg-yellow-400"
-          >
-            Formation
-          </a>
-
-          {authUser ? (
-            <button
-              type="button"
-              onClick={handleLogout}
-              title="Cliquez pour deconnecter"
-              className="flex items-center gap-2 rounded-full border border-[#2a3a68] bg-[#0b1222] px-2 py-1.5 text-slate-100"
-            >
-              {authUser.avatarUrl ? (
-                <img
-                  src={authUser.avatarUrl}
-                  alt={`Avatar ${authUser.fullName || authUser.email || "utilisateur"}`}
-                  className="h-8 w-8 rounded-full border border-[#2a3a68] object-cover"
-                />
-              ) : (
-                <span className="max-w-[180px] truncate rounded-full border border-[#2a3a68] bg-[#121d38] px-3 py-1 text-xs font-semibold text-slate-100">
-                  {authUser.fullName || authUser.email || avatarInitials}
-                </span>
-              )}
-            </button>
-          ) : (
+          <div className="flex flex-wrap items-center justify-end gap-3">
             <Link
-              href="/login"
-              className="rounded-full border border-[#2a3a68] bg-[#0b1222] px-4 py-2 text-sm font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300"
+              href="/create-site"
+              className="rounded-full border border-yellow-500 bg-yellow-500 px-5 py-2.5 text-sm font-semibold text-[#05070d] transition hover:bg-yellow-400"
             >
-              {authLoading ? "Chargement..." : "Connexion"}
+              Creer mon site
             </Link>
-          )}
+            <a
+              href="https://youtube.com"
+              target="_blank"
+              rel="noreferrer"
+              className="rounded-full border border-yellow-500 bg-yellow-500 px-5 py-2.5 text-sm font-semibold text-[#05070d] transition hover:bg-yellow-400"
+            >
+              Formation
+            </a>
+
+            {authUser?.role === "entreprise" ? (
+              <Link
+                href="/espace-entreprise"
+                className="rounded-full border border-[#2a3a68] bg-[#0b1222] px-5 py-2.5 text-sm font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300"
+              >
+                Espace entreprise
+              </Link>
+            ) : null}
+
+            {authUser?.role === "super_admin" ? (
+              <Link
+                href="/espace-admin"
+                className="rounded-full border border-[#2a3a68] bg-[#0b1222] px-5 py-2.5 text-sm font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300"
+              >
+                Espace admin
+              </Link>
+            ) : null}
+
+            {authUser ? (
+              <button
+                type="button"
+                onClick={handleLogout}
+                title="Cliquez pour deconnecter"
+                className="flex items-center gap-2 rounded-full border border-[#2a3a68] bg-[#0b1222] px-3 py-2 text-slate-100"
+              >
+                {authUser.avatarUrl ? (
+                  <img
+                    src={authUser.avatarUrl}
+                    alt={`Avatar ${authUser.fullName || authUser.email || "utilisateur"}`}
+                    className="h-8 w-8 rounded-full border border-[#2a3a68] object-cover"
+                  />
+                ) : (
+                  <span className="max-w-[220px] truncate rounded-full border border-[#2a3a68] bg-[#121d38] px-3 py-1 text-xs font-semibold text-slate-100">
+                    {authUser.fullName || authUser.email || avatarInitials}
+                  </span>
+                )}
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                className="rounded-full border border-[#2a3a68] bg-[#0b1222] px-5 py-2.5 text-sm font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300"
+              >
+                {authLoading ? "Chargement..." : "Connexion"}
+              </Link>
+            )}
+          </div>
+        </div>
+
+        <div className="mt-4 border-t border-[#16203a] pt-4">
+          <div className="flex flex-wrap items-center gap-x-7 gap-y-3 text-[15px] font-medium text-slate-300">
+            {MAIN_NAV_LINKS.map((item) => (
+              <Link
+                key={item.label}
+                href={item.href}
+                className="transition hover:text-yellow-300"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </nav>
     </header>

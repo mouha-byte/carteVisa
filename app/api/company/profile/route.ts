@@ -8,7 +8,7 @@ import {
   handleApiError,
   parseJsonRequestBody,
 } from "@/lib/server/api-response";
-import { supabasePatch, supabasePost } from "@/lib/server/supabase-rest";
+import { supabaseGet, supabasePatch, supabasePost } from "@/lib/server/supabase-rest";
 
 type CompanyRow = {
   id: string;
@@ -50,6 +50,41 @@ const COMPANY_SELECT =
   "id,owner_user_id,name,slug,sector,description,address,city,country,phone,email,website_url,logo_url,cover_url,status,is_featured,created_at,updated_at";
 
 export const runtime = "nodejs";
+
+export async function GET(request: Request) {
+  try {
+    const actorOrResponse = await requireAuthenticatedActor(request);
+    if (actorOrResponse instanceof Response) {
+      return actorOrResponse;
+    }
+    const actor = actorOrResponse;
+
+    if (!isEntrepriseRoleActor(actor)) {
+      return apiError(
+        403,
+        "FORBIDDEN",
+        "Only entreprise accounts can access a company profile."
+      );
+    }
+
+    if (!actor.companyId) {
+      return apiError(404, "NOT_FOUND", "No company profile linked to this account.");
+    }
+
+    const profileResult = await supabaseGet<CompanyRow[]>(
+      `companies?select=${COMPANY_SELECT}&id=eq.${actor.companyId}&limit=1`
+    );
+
+    const company = profileResult.data[0] ?? null;
+    if (!company) {
+      return apiError(404, "NOT_FOUND", "Company profile not found.");
+    }
+
+    return apiSuccess(company);
+  } catch (error) {
+    return handleApiError(error);
+  }
+}
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return Boolean(value) && typeof value === "object" && !Array.isArray(value);

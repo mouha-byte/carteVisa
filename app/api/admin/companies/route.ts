@@ -12,7 +12,7 @@ import {
   parsePageParam,
   parseSortParam,
 } from "@/lib/server/query-utils";
-import { supabaseGet, supabasePost } from "@/lib/server/supabase-rest";
+import { supabaseGet, supabasePatch, supabasePost } from "@/lib/server/supabase-rest";
 
 type CompanyStatus = "pending" | "active" | "inactive" | "rejected";
 
@@ -318,6 +318,16 @@ export async function POST(request: Request) {
     if (!createdCompany) {
       return apiError(500, "CREATE_FAILED", "Failed to create company.");
     }
+
+    await supabasePatch<null>(
+      `profiles?id=eq.${createdCompany.owner_user_id}`,
+      {
+        company_id: createdCompany.id,
+      },
+      {
+        prefer: "return=minimal",
+      }
+    );
 
     return apiSuccess(createdCompany, undefined, { status: 201 });
   } catch (error) {
