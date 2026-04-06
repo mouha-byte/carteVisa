@@ -1,3 +1,8 @@
+import {
+  getSupabaseEnvHints,
+  getSupabaseServerConfig,
+} from "@/lib/server/supabase-config";
+
 type SupabaseRequestOptions = {
   count?: boolean;
   prefer?: string;
@@ -25,15 +30,10 @@ export class SupabaseRestError extends Error {
 }
 
 function getSupabaseConfig(method: SupabaseRestMethod) {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const { supabaseUrl, serviceRoleKey, anonKey } = getSupabaseServerConfig();
 
   if (!supabaseUrl) {
-    throw new SupabaseRestError(
-      "Missing NEXT_PUBLIC_SUPABASE_URL.",
-      500
-    );
+    throw new SupabaseRestError("Missing Supabase URL. " + getSupabaseEnvHints(), 500);
   }
 
   // Public read routes can use the anon key when service role is not configured.
@@ -42,7 +42,7 @@ function getSupabaseConfig(method: SupabaseRestMethod) {
 
     if (!apiKey) {
       throw new SupabaseRestError(
-        "Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_ANON_KEY.",
+        "Missing Supabase API key. " + getSupabaseEnvHints(),
         500
       );
     }
@@ -54,10 +54,7 @@ function getSupabaseConfig(method: SupabaseRestMethod) {
   }
 
   if (!serviceRoleKey) {
-    throw new SupabaseRestError(
-      "Missing SUPABASE_SERVICE_ROLE_KEY.",
-      500
-    );
+    throw new SupabaseRestError("Missing service role key. " + getSupabaseEnvHints(), 500);
   }
 
   return {

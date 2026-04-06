@@ -1,19 +1,22 @@
+import {
+  getSupabaseEnvHints,
+  getSupabaseServerConfig,
+} from "@/lib/server/supabase-config";
 import { SupabaseRestError } from "@/lib/server/supabase-rest";
 
 function getSupabaseConfig() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const { supabaseUrl, serviceRoleKey } = getSupabaseServerConfig();
 
   if (!supabaseUrl) {
-    throw new SupabaseRestError("Missing NEXT_PUBLIC_SUPABASE_URL.", 500);
+    throw new SupabaseRestError("Missing Supabase URL. " + getSupabaseEnvHints(), 500);
   }
 
   if (!serviceRoleKey) {
-    throw new SupabaseRestError("Missing SUPABASE_SERVICE_ROLE_KEY.", 500);
+    throw new SupabaseRestError("Missing service role key. " + getSupabaseEnvHints(), 500);
   }
 
   return {
-    supabaseUrl: supabaseUrl.replace(/\/$/, ""),
+    supabaseUrl,
     serviceRoleKey,
   };
 }

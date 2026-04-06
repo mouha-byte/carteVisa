@@ -1,4 +1,8 @@
 import { apiError } from "@/lib/server/api-response";
+import {
+  getSupabaseEnvHints,
+  getSupabaseServerConfig,
+} from "@/lib/server/supabase-config";
 import { SupabaseRestError, supabaseGet } from "@/lib/server/supabase-rest";
 
 type SupabaseAuthUser = {
@@ -22,19 +26,18 @@ export type AuthenticatedActor = {
 };
 
 function getPublicSupabaseConfig() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const anonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+  const { supabaseUrl, anonKey } = getSupabaseServerConfig();
 
   if (!supabaseUrl) {
-    throw new SupabaseRestError("Missing NEXT_PUBLIC_SUPABASE_URL.", 500);
+    throw new SupabaseRestError("Missing Supabase URL. " + getSupabaseEnvHints(), 500);
   }
 
   if (!anonKey) {
-    throw new SupabaseRestError("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY.", 500);
+    throw new SupabaseRestError("Missing anon key. " + getSupabaseEnvHints(), 500);
   }
 
   return {
-    supabaseUrl: supabaseUrl.replace(/\/$/, ""),
+    supabaseUrl,
     anonKey,
   };
 }
