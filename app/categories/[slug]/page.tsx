@@ -38,6 +38,10 @@ type ApiFailure = {
 };
 
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  entreprise:
+    "Entreprises etablies avec structure operationnelle, services actifs et recrutement en cours.",
+  startup:
+    "Startups innovantes en phase de croissance, produit digital et acceleration commerciale.",
   technologie:
     "Entreprises tech specialisees en logiciels, IA, cloud et transformation digitale.",
   sante:

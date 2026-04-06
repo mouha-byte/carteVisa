@@ -130,6 +130,10 @@ const FALLBACK_COMPANIES: CompanyCard[] = [
 ];
 
 const CATEGORY_DESCRIPTIONS: Record<string, string> = {
+  entreprise:
+    "Entreprises etablies avec structure operationnelle, services actifs et recrutement en cours.",
+  startup:
+    "Startups innovantes en phase de croissance, produit digital et acceleration commerciale.",
   technologie:
     "Entreprises tech specialisees en logiciels, IA, cloud et transformation digitale.",
   sante:
@@ -222,6 +226,57 @@ function searchTypeLabel(type: SearchResultType): string {
   }
 
   return "Service";
+}
+
+function isCombinedEntrepriseStartupCategory(category: Category): boolean {
+  const label = `${category.name} ${category.slug}`.toLowerCase();
+  return label.includes("startup") && (label.includes("entreprise") || label.includes("enterprise"));
+}
+
+function splitCategoryForDisplay(category: Category): Category[] {
+  if (!isCombinedEntrepriseStartupCategory(category)) {
+    return [category];
+  }
+
+  return [
+    {
+      ...category,
+      id: `${category.id}-entreprise`,
+      name: "Entreprise",
+    },
+    {
+      ...category,
+      id: `${category.id}-startup`,
+      name: "Startup",
+    },
+  ];
+}
+
+function isStartupCompany(company: CompanyCard): boolean {
+  const label = `${company.name} ${company.slug} ${company.sector || ""}`.toLowerCase();
+  return /start[\s-]?up/.test(label);
+}
+
+function splitSectionForDisplay(section: CategorySection): CategorySection[] {
+  if (!isCombinedEntrepriseStartupCategory(section.category)) {
+    return [section];
+  }
+
+  const startupCompanies = section.companies.filter((company) => isStartupCompany(company));
+  const entrepriseCompanies = section.companies.filter((company) => !isStartupCompany(company));
+
+  const [entrepriseCategory, startupCategory] = splitCategoryForDisplay(section.category);
+
+  return [
+    {
+      category: entrepriseCategory,
+      companies: entrepriseCompanies.length > 0 ? entrepriseCompanies : section.companies,
+    },
+    {
+      category: startupCategory,
+      companies: startupCompanies.length > 0 ? startupCompanies : section.companies,
+    },
+  ];
 }
 
 function CompanyCoverCard({ company }: { company: CompanyCard }) {
@@ -352,7 +407,7 @@ export default function HomePage() {
       return activeJobs;
     }
 
-    return activeJobs.slice(0, 6);
+    return activeJobs.slice(0, 4);
   }, [activeJobs, showAllJobs]);
 
   const visibleCategorySections = useMemo(() => {
@@ -360,7 +415,7 @@ export default function HomePage() {
       return categorySections;
     }
 
-    return categorySections.slice(0, 6);
+    return categorySections.slice(0, 4);
   }, [categorySections, showAllCategorySections]);
 
   const cityOptions = useMemo(() => {
@@ -410,12 +465,16 @@ export default function HomePage() {
     }
 
     if (categoriesResult.ok) {
-      setCategories(categoriesResult.data);
+      const displayCategories = categoriesResult.data.flatMap((category) =>
+        splitCategoryForDisplay(category)
+      );
 
-      const sections = await Promise.all(
+      setCategories(displayCategories);
+
+      const rawSections = await Promise.all(
         categoriesResult.data.map(async (category) => {
           const byCategory = await requestApi<CompanyCard[]>(
-            `/api/companies?page=1&limit=6&sort=newest&category=${encodeURIComponent(category.slug)}`
+            `/api/companies?page=1&limit=4&sort=newest&category=${encodeURIComponent(category.slug)}`
           );
 
           return {
@@ -425,7 +484,11 @@ export default function HomePage() {
         })
       );
 
-      setCategorySections(sections.filter((section) => section.companies.length > 0));
+      const displaySections = rawSections
+        .filter((section) => section.companies.length > 0)
+        .flatMap((section) => splitSectionForDisplay(section));
+
+      setCategorySections(displaySections);
     } else if (!nextError) {
       nextError = categoriesResult.message;
     }
@@ -525,10 +588,10 @@ export default function HomePage() {
     <div className="min-h-screen bg-[#05070d] text-slate-100">
       <SiteBanner />
 
-      <main id="top" className="mx-auto flex w-full max-w-[92rem] flex-col gap-12 px-[var(--page-gutter)] py-8 md:gap-14 md:py-12">
+      <main id="top" className="mx-auto flex w-full max-w-[92rem] flex-col gap-14 px-[var(--page-gutter)] py-9 md:gap-16 md:py-14">
         <section id="hero-media" className="reveal-up space-y-5">
           <div className="overflow-hidden rounded-3xl border border-[#223058] bg-[#0b1326] shadow-[0_20px_50px_rgba(3,6,20,0.55)]">
-            <div className="relative aspect-[21/8] min-h-[200px] w-full md:min-h-[320px]">
+            <div className="relative min-h-[280px] w-full md:min-h-[420px]">
               <video
                 className="h-full w-full object-cover"
                 autoPlay
@@ -543,30 +606,48 @@ export default function HomePage() {
                 />
               </video>
 
-              <div className="absolute inset-0 bg-gradient-to-r from-[#05070d]/90 via-[#0b1326]/55 to-transparent" />
-              <div className="absolute inset-0 flex items-end p-7 md:p-12">
+              <div className="absolute inset-0 bg-gradient-to-r from-[#05070d]/92 via-[#0b1326]/62 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#05070d]/80 via-transparent to-transparent" />
+              <div className="absolute inset-0 flex items-end p-4 sm:p-7 md:p-12">
                 <div className="max-w-4xl space-y-4">
                   <p className="headline-script inline-flex rounded-full border border-yellow-500/60 bg-[#05070d]/70 px-4 py-1.5 text-sm text-yellow-300">
                     Landing multimedia professionnelle
                   </p>
-                  <h1 className="headline-special headline-accent text-4xl font-black leading-tight md:text-7xl">
-                    {/* Espace professionnel: entreprises, offres actives, categories et fiches detaillees. */}
+                  <h1 className="headline-special headline-accent text-3xl font-black leading-tight sm:text-4xl md:text-7xl">
+                    Design simple, dynamique et visuel
                   </h1>
-                  <p className="max-w-3xl text-base text-slate-200 md:text-lg">
-                    Design simple, dynamique et visuel pour presenter les entreprises avec des medias dominants.
+                  <p className="max-w-3xl text-sm text-slate-200 sm:text-base md:text-lg">
+                    Design simple, dynamique et visuel pour presenter les entreprises avec des medias dominants. Pensee pour un affichage fluide sur mobile et desktop.
                   </p>
+                  <div className="flex flex-wrap items-center gap-3 pt-1">
+                    <Link
+                      href="#search"
+                      className="rounded-full border border-yellow-500 bg-yellow-500 px-4 py-2 text-xs font-bold text-[#05070d] transition hover:bg-yellow-400 sm:px-5 sm:py-2.5 sm:text-sm"
+                    >
+                      Explorer les entreprises
+                    </Link>
+                    <Link
+                      href="/create-site"
+                      className="rounded-full border border-[#2a3a68] bg-[#0b1222] px-4 py-2 text-xs font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 sm:px-5 sm:py-2.5 sm:text-sm"
+                    >
+                      Publier mon entreprise
+                    </Link>
+                    <span className="rounded-full border border-[#2a3a68] bg-[#05070d]/70 px-3 py-1 text-[11px] font-semibold text-slate-300">
+                      Responsive mobile et desktop
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <p className="text-center text-base font-semibold text-slate-200 md:text-lg">
-            Plateforme orientee business: decouvrez les entreprises les plus recentes puis les offres actives.
+          <p className="text-center text-sm font-semibold text-slate-200 sm:text-base md:text-lg">
+            Plateforme orientee business: decouvrez les entreprises recentes, les medias dominants et les offres actives sur tous les formats d ecran.
           </p>
         </section>
 
         <section className="reveal-up reveal-delay-1 space-y-4 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-6 md:p-8">
-          <div className="flex items-center justify-between gap-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="headline-special headline-accent text-xl font-black md:text-2xl">
               Medias secondaires
             </h2>
@@ -583,10 +664,10 @@ export default function HomePage() {
                   href={ad.link}
                   target={ad.link.startsWith("http") ? "_blank" : undefined}
                   rel={ad.link.startsWith("http") ? "noreferrer" : undefined}
-                  className="mx-2 w-[360px] shrink-0 overflow-hidden rounded-2xl border border-[#2a3a68] bg-[#101a31] transition hover:border-yellow-500"
+                  className="mx-2 w-[78vw] min-w-[260px] max-w-[360px] shrink-0 overflow-hidden rounded-2xl border border-[#2a3a68] bg-[#101a31] transition hover:border-yellow-500"
                 >
                   <div
-                    className="h-36 w-full bg-cover bg-center"
+                    className="h-32 w-full bg-cover bg-center sm:h-36"
                     style={{
                       backgroundImage: `linear-gradient(180deg, rgba(5,7,13,0) 0%, rgba(5,7,13,0.78) 100%), url('${ad.imageUrl}')`,
                     }}
@@ -609,10 +690,10 @@ export default function HomePage() {
 
         <section
           id="search"
-          className="reveal-up reveal-delay-2 rounded-3xl border border-[#1f2a4d] bg-[#0a1120] p-6 md:p-8"
+          className="reveal-up reveal-delay-2 rounded-3xl border border-[#1f2a4d] bg-[#0a1120] p-7 md:p-10"
         >
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <h2 className="headline-special headline-accent text-2xl font-black md:text-3xl">
+            <h2 className="headline-special headline-accent text-3xl font-black md:text-4xl">
               Recherche instantanee
             </h2>
             <span className="rounded-full border border-[#2a3a68] px-3 py-1 text-xs text-slate-300">
@@ -711,7 +792,7 @@ export default function HomePage() {
               {searchResults.map((item) => (
                 <article
                   key={`${item.type}-${item.id}`}
-                  className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-5"
+                  className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-6"
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="rounded-full border border-yellow-500/70 px-2 py-1 text-[11px] font-semibold text-yellow-300">
@@ -722,10 +803,10 @@ export default function HomePage() {
                     ) : null}
                   </div>
 
-                  <h3 className="text-base font-black text-white">{item.title}</h3>
-                  <p className="mt-1 text-sm text-slate-300">{item.subtitle}</p>
+                  <h3 className="text-lg font-black text-white">{item.title}</h3>
+                  <p className="mt-1 text-base text-slate-300">{item.subtitle}</p>
                   {item.description ? (
-                    <p className="mt-2 text-sm text-slate-400">{item.description}</p>
+                    <p className="mt-2 text-base text-slate-400">{item.description}</p>
                   ) : null}
 
                   <Link
@@ -764,14 +845,14 @@ export default function HomePage() {
           ) : null}
         </section>
 
-        <section id="jobs" className="reveal-up reveal-delay-3 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-6 md:p-8">
-          <div className="mb-5 flex items-center justify-between gap-3">
+        <section id="jobs" className="reveal-up reveal-delay-3 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-7 md:p-10">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
             <h2 className="headline-special headline-accent text-3xl font-black">Offres actives</h2>
             <div className="flex items-center gap-2">
               <span className="rounded-full border border-[#2a3a68] px-3 py-1 text-xs text-slate-300">
                 {activeJobs.length} offre(s)
               </span>
-              {activeJobs.length > 6 ? (
+              {activeJobs.length > 4 ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -790,7 +871,7 @@ export default function HomePage() {
               Aucune offre active pour le moment.
             </p>
           ) : (
-            <div className="grid gap-6 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="grid gap-7 md:grid-cols-2">
               {visibleJobs.map((job) => (
                 <article key={job.id} className="overflow-hidden rounded-2xl border border-[#2a3a68] bg-[#121d38]">
                   <div className="relative h-36 w-full bg-[#1a2749]">
@@ -802,14 +883,14 @@ export default function HomePage() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0a1120]/80 via-transparent to-transparent" />
                   </div>
-                  <div className="space-y-3 p-5">
+                  <div className="space-y-4 p-6">
                     <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-base font-black text-white">{job.title}</h3>
+                      <h3 className="text-lg font-black text-white">{job.title}</h3>
                       <span className="text-xs text-slate-300">
                         {job.contract_type || "Contrat"}
                       </span>
                     </div>
-                    <p className="text-sm text-slate-300">
+                    <p className="text-base text-slate-300">
                       {job.company?.name || "Entreprise"} • {job.location_city || "Ville"}
                       {job.is_remote ? " • Remote" : ""}
                     </p>
@@ -833,15 +914,15 @@ export default function HomePage() {
             </div>
           )}
 
-          {!showAllJobs && activeJobs.length > 6 ? (
+          {!showAllJobs && activeJobs.length > 4 ? (
             <p className="mt-4 text-xs text-slate-400">
-              Affichage limite a 6 offres. Cliquez sur Voir plus pour afficher toutes les offres.
+              Affichage limite a 4 offres. Cliquez sur Voir plus pour afficher toutes les offres.
             </p>
           ) : null}
         </section>
 
-        <section id="categories" className="reveal-up reveal-delay-4 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-6 md:p-8">
-          <div className="mb-6 flex items-center justify-between gap-3">
+        <section id="categories" className="reveal-up reveal-delay-4 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-7 md:p-10">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <h2 className="headline-special headline-accent text-3xl font-black">
               Entreprises par categorie
             </h2>
@@ -849,7 +930,7 @@ export default function HomePage() {
               <span className="rounded-full border border-[#2a3a68] px-3 py-1 text-xs text-slate-300">
                 {categories.length} categorie(s)
               </span>
-              {categorySections.length > 6 ? (
+              {categorySections.length > 4 ? (
                 <button
                   type="button"
                   onClick={() => {
@@ -863,19 +944,19 @@ export default function HomePage() {
             </div>
           </div>
 
-          {!showAllCategorySections && categorySections.length > 6 ? (
+          {!showAllCategorySections && categorySections.length > 4 ? (
             <p className="mb-4 text-xs text-slate-400">
-              Affichage limite a 6 categories. Cliquez sur Voir plus pour tout afficher.
+              Affichage limite a 4 categories. Cliquez sur Voir plus pour tout afficher.
             </p>
           ) : null}
 
-          <div className="space-y-8">
+          <div className="space-y-10">
             {visibleCategorySections.map((section) => (
-              <article key={section.category.id} className="rounded-2xl border border-[#2a3a68] bg-[#101a31] p-5 md:p-6">
+              <article key={section.category.id} className="rounded-2xl border border-[#2a3a68] bg-[#101a31] p-6 md:p-7">
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <div>
                     <h3 className="text-2xl font-black text-white">{section.category.name}</h3>
-                    <p className="mt-1 text-sm text-slate-300">
+                    <p className="mt-1 text-base text-slate-300">
                       {CATEGORY_DESCRIPTIONS[section.category.slug] || "Decouvrez les entreprises de cette categorie."}
                     </p>
                   </div>
@@ -887,7 +968,7 @@ export default function HomePage() {
                   </Link>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+                <div className="grid gap-7 md:grid-cols-2">
                   {section.companies.map((company) => (
                     <CompanyCoverCard key={company.id} company={company} />
                   ))}
@@ -897,7 +978,7 @@ export default function HomePage() {
           </div>
         </section>
 
-        <section className="grid gap-6 lg:grid-cols-2">
+        <section className="grid gap-6 md:grid-cols-2">
           <Link
             href="/contact"
             className="rounded-3xl border border-[#1f2a4d] bg-[#0a1120] p-7 transition hover:border-yellow-500"
