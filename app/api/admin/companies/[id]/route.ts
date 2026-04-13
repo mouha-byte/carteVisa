@@ -9,12 +9,14 @@ import { isUuid } from "@/lib/server/query-utils";
 import { supabaseDelete, supabaseGet, supabasePatch } from "@/lib/server/supabase-rest";
 
 type CompanyStatus = "pending" | "active" | "inactive" | "rejected";
+type CompanyLegalType = "sarl" | "startup";
 
 type CompanyRow = {
   id: string;
   owner_user_id: string;
   name: string;
   slug: string;
+  company_type: CompanyLegalType;
   sector: string | null;
   description: string | null;
   city: string | null;
@@ -29,6 +31,7 @@ type CompanyPatchPayload = {
   owner_user_id?: string;
   name?: string;
   slug?: string;
+  company_type?: CompanyLegalType;
   sector?: string | null;
   description?: string | null;
   city?: string | null;
@@ -38,7 +41,7 @@ type CompanyPatchPayload = {
 };
 
 const COMPANY_SELECT =
-  "id,owner_user_id,name,slug,sector,description,city,country,status,is_featured,created_at,updated_at";
+  "id,owner_user_id,name,slug,company_type,sector,description,city,country,status,is_featured,created_at,updated_at";
 
 const COMPANY_STATUSES: readonly CompanyStatus[] = [
   "pending",
@@ -46,6 +49,8 @@ const COMPANY_STATUSES: readonly CompanyStatus[] = [
   "inactive",
   "rejected",
 ] as const;
+
+const COMPANY_TYPES: readonly CompanyLegalType[] = ["sarl", "startup"] as const;
 
 export const runtime = "nodejs";
 
@@ -130,6 +135,18 @@ function parseCompanyPatchPayload(body: unknown): {
       );
     } else {
       data.slug = slug;
+    }
+  }
+
+  if ("company_type" in body) {
+    const rawType = body.company_type;
+    if (
+      typeof rawType !== "string" ||
+      !COMPANY_TYPES.includes(rawType as CompanyLegalType)
+    ) {
+      errors.push("company_type must be one of: sarl, startup.");
+    } else {
+      data.company_type = rawType as CompanyLegalType;
     }
   }
 

@@ -10,6 +10,7 @@ type CompanyDetail = {
   id: string;
   name: string;
   slug: string;
+  company_type: "sarl" | "startup";
   sector: string | null;
   description: string | null;
   address: string | null;
@@ -290,7 +291,9 @@ export default function CompanyDetailPage({
                     <div>
                       <p className="text-xs uppercase tracking-[0.12em] text-yellow-300">Fiche entreprise</p>
                       <h1 className="text-2xl font-black text-white md:text-4xl">{company.name}</h1>
-                      <p className="mt-1 text-sm text-slate-200">{company.sector || "Secteur non specifie"}</p>
+                      <p className="mt-1 text-sm text-slate-200">
+                        {company.company_type === "startup" ? "Startup" : "SARL"} • {company.sector || "Secteur non specifie"}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -305,6 +308,10 @@ export default function CompanyDetailPage({
                 </p>
 
                 <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <div className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-3">
+                    <p className="text-[11px] uppercase tracking-[0.08em] text-slate-400">Type</p>
+                    <p className="mt-1 text-sm text-white">{company.company_type === "startup" ? "Startup" : "SARL"}</p>
+                  </div>
                   <div className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-3">
                     <p className="text-[11px] uppercase tracking-[0.08em] text-slate-400">Adresse</p>
                     <p className="mt-1 text-sm text-white">{company.address || "Non precisee"}</p>

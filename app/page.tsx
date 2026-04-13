@@ -45,6 +45,7 @@ type CompanyCard = {
   id: string;
   name: string;
   slug: string;
+  company_type: "sarl" | "startup";
   sector: string | null;
   city: string | null;
   logo_url: string | null;
@@ -109,6 +110,7 @@ const FALLBACK_COMPANIES: CompanyCard[] = [
     id: "fallback-atlas",
     name: "Atlas Tech SARL",
     slug: "atlas-tech",
+    company_type: "sarl",
     sector: "Technologie",
     city: "Casablanca",
     logo_url: null,
@@ -120,6 +122,7 @@ const FALLBACK_COMPANIES: CompanyCard[] = [
     id: "fallback-health",
     name: "Maghreb Health Plus",
     slug: "maghreb-health-plus",
+    company_type: "sarl",
     sector: "Sante",
     city: "Rabat",
     logo_url: null,
@@ -253,6 +256,10 @@ function splitCategoryForDisplay(category: Category): Category[] {
 }
 
 function isStartupCompany(company: CompanyCard): boolean {
+  if (company.company_type === "startup") {
+    return true;
+  }
+
   const label = `${company.name} ${company.slug} ${company.sector || ""}`.toLowerCase();
   return /start[\s-]?up/.test(label);
 }
@@ -281,6 +288,7 @@ function splitSectionForDisplay(section: CategorySection): CategorySection[] {
 
 function CompanyCoverCard({ company }: { company: CompanyCard }) {
   const coverSrc = company.cover_url || DEFAULT_COMPANY_COVER;
+  const typeLabel = company.company_type === "startup" ? "Startup" : "SARL";
 
   return (
     <Link
@@ -309,7 +317,7 @@ function CompanyCoverCard({ company }: { company: CompanyCard }) {
         <div className="absolute inset-x-4 bottom-4 rounded-2xl border border-white/20 bg-[#05070d]/70 px-4 py-3 backdrop-blur">
           <p className="truncate text-base font-black text-white">{company.name}</p>
           <p className="mt-1 max-h-0 overflow-hidden text-xs text-slate-200 opacity-0 transition-all duration-300 group-hover:max-h-8 group-hover:opacity-100 group-focus-visible:max-h-8 group-focus-visible:opacity-100">
-            {(company.city || company.sector || "Ville non specifiee") + " • " + company.open_jobs_count + " poste(s)"}
+            {typeLabel + " • " + (company.city || company.sector || "Ville non specifiee") + " • " + company.open_jobs_count + " poste(s)"}
           </p>
         </div>
       </div>

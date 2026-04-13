@@ -29,28 +29,11 @@ export class SupabaseRestError extends Error {
   }
 }
 
-function getSupabaseConfig(method: SupabaseRestMethod) {
-  const { supabaseUrl, serviceRoleKey, anonKey } = getSupabaseServerConfig();
+function getSupabaseConfig() {
+  const { supabaseUrl, serviceRoleKey } = getSupabaseServerConfig();
 
   if (!supabaseUrl) {
     throw new SupabaseRestError("Missing Supabase URL. " + getSupabaseEnvHints(), 500);
-  }
-
-  // Public read routes can use the anon key when service role is not configured.
-  if (method === "GET") {
-    const apiKey = serviceRoleKey ?? anonKey;
-
-    if (!apiKey) {
-      throw new SupabaseRestError(
-        "Missing Supabase API key. " + getSupabaseEnvHints(),
-        500
-      );
-    }
-
-    return {
-      supabaseUrl: supabaseUrl.replace(/\/$/, ""),
-      apiKey,
-    };
   }
 
   if (!serviceRoleKey) {
@@ -82,7 +65,7 @@ async function supabaseRequest<T>(
   resourcePath: string,
   options: SupabaseRequestOptions = {}
 ): Promise<SupabaseRequestResult<T>> {
-  const { supabaseUrl, apiKey } = getSupabaseConfig(method);
+  const { supabaseUrl, apiKey } = getSupabaseConfig();
   const url = `${supabaseUrl}/rest/v1/${resourcePath}`;
 
   const headers = new Headers({

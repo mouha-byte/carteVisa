@@ -13,6 +13,7 @@ type CompanySearchRow = {
   id: string;
   name: string;
   slug: string;
+  company_type: "sarl" | "startup";
   sector: string | null;
   description: string | null;
   city: string | null;
@@ -49,6 +50,7 @@ type CompanySummaryRow = {
   name: string;
   slug: string;
   city: string | null;
+  company_type: "sarl" | "startup";
   sector: string | null;
 };
 
@@ -195,7 +197,7 @@ export async function GET(request: Request) {
 
     if (shouldQueryCompanies) {
       const companyParams = new URLSearchParams({
-        select: "id,name,slug,sector,description,city",
+        select: "id,name,slug,company_type,sector,description,city",
         status: "eq.active",
         order: "created_at.desc",
         limit: String(limit),
@@ -292,7 +294,7 @@ export async function GET(request: Request) {
 
     if (relatedCompanyIds.length > 0) {
       const summaryParams = new URLSearchParams({
-        select: "id,name,slug,city,sector",
+        select: "id,name,slug,city,company_type,sector",
       });
       summaryParams.append("status", "eq.active");
       summaryParams.append("id", `in.(${relatedCompanyIds.join(",")})`);
@@ -310,7 +312,7 @@ export async function GET(request: Request) {
       id: company.id,
       type: "company",
       title: company.name,
-      subtitle: `${company.sector || "Secteur"} • ${company.city || "Ville"}`,
+      subtitle: `${company.company_type === "startup" ? "Startup" : "SARL"} • ${company.sector || "Secteur"} • ${company.city || "Ville"}`,
       description: trimDescription(company.description),
       city: company.city,
       link: `/entreprises/${company.slug}`,

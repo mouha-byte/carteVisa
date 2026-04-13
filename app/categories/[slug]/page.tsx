@@ -16,6 +16,7 @@ type CompanyCard = {
   id: string;
   name: string;
   slug: string;
+  company_type: "sarl" | "startup";
   sector: string | null;
   city: string | null;
   logo_url: string | null;
@@ -153,7 +154,7 @@ export default function CategoryPage({
     }
 
     return companies.filter((item) => {
-      return [item.name, item.sector || "", item.city || ""]
+      return [item.name, item.company_type, item.sector || "", item.city || ""]
         .join(" ")
         .toLowerCase()
         .includes(query);
@@ -255,7 +256,7 @@ export default function CategoryPage({
                     <div className="absolute inset-x-4 bottom-4 rounded-2xl border border-white/20 bg-[#05070d]/70 px-4 py-3 backdrop-blur">
                       <p className="truncate text-base font-black text-white">{company.name}</p>
                       <p className="mt-1 max-h-0 overflow-hidden text-xs text-slate-200 opacity-0 transition-all duration-300 group-hover:max-h-8 group-hover:opacity-100 group-focus-visible:max-h-8 group-focus-visible:opacity-100">
-                        {(company.city || company.sector || "Ville non specifiee") + " • " + company.open_jobs_count + " poste(s)"}
+                        {(company.company_type === "startup" ? "Startup" : "SARL") + " • " + (company.city || company.sector || "Ville non specifiee") + " • " + company.open_jobs_count + " poste(s)"}
                       </p>
                     </div>
                   </div>

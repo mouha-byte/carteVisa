@@ -44,12 +44,14 @@ type RequestResult<T, M = Record<string, unknown>> =
     };
 
 type CompanyStatus = "pending" | "active" | "inactive" | "rejected";
+type CompanyLegalType = "sarl" | "startup";
 
 type AdminCompany = {
   id: string;
   owner_user_id: string;
   name: string;
   slug: string;
+  company_type: CompanyLegalType;
   sector: string | null;
   description: string | null;
   city: string | null;
@@ -128,6 +130,7 @@ type CompanyCreateForm = {
   owner_user_id: string;
   name: string;
   slug: string;
+  company_type: CompanyLegalType;
   sector: string;
   description: string;
   city: string;
@@ -140,6 +143,7 @@ const EMPTY_COMPANY_CREATE_FORM: CompanyCreateForm = {
   owner_user_id: "",
   name: "",
   slug: "",
+  company_type: "sarl",
   sector: "",
   description: "",
   city: "",
@@ -247,6 +251,7 @@ export default function EspaceAdminPage() {
   const [busyCompanyId, setBusyCompanyId] = useState<string | null>(null);
 
   const [statusDrafts, setStatusDrafts] = useState<Record<string, CompanyStatus>>({});
+  const [typeDrafts, setTypeDrafts] = useState<Record<string, CompanyLegalType>>({});
   const [featuredDrafts, setFeaturedDrafts] = useState<Record<string, boolean>>({});
 
   const [adminCvFeedback, setAdminCvFeedback] = useState<string | null>(null);
@@ -274,6 +279,17 @@ export default function EspaceAdminPage() {
   );
 
   const applicationsCount = useMemo(() => applications.length, [applications]);
+
+  const noDashboardData = useMemo(
+    () =>
+      !dataLoading &&
+      !dashboardError &&
+      companies.length === 0 &&
+      contactMessages.length === 0 &&
+      siteRequests.length === 0 &&
+      applications.length === 0,
+    [applications.length, companies.length, contactMessages.length, dashboardError, dataLoading, siteRequests.length]
+  );
 
   const dashboardCompanies = useMemo(() => companies.slice(0, 6), [companies]);
   const dashboardApplications = useMemo(() => applications.slice(0, 6), [applications]);
@@ -321,6 +337,9 @@ export default function EspaceAdminPage() {
       setStatusDrafts(
         Object.fromEntries(companiesResult.data.map((item) => [item.id, item.status]))
       );
+      setTypeDrafts(
+        Object.fromEntries(companiesResult.data.map((item) => [item.id, item.company_type]))
+      );
       setFeaturedDrafts(
         Object.fromEntries(
           companiesResult.data.map((item) => [item.id, item.is_featured])
@@ -329,6 +348,7 @@ export default function EspaceAdminPage() {
     } else {
       setCompanies([]);
       setStatusDrafts({});
+      setTypeDrafts({});
       setFeaturedDrafts({});
       firstError = firstError ?? companiesResult.message;
     }
@@ -430,6 +450,7 @@ export default function EspaceAdminPage() {
         owner_user_id: ownerUserId,
         name,
         slug,
+        company_type: companyCreateForm.company_type,
         sector: companyCreateForm.sector.trim() || null,
         description: companyCreateForm.description.trim() || null,
         city: companyCreateForm.city.trim() || null,
@@ -469,6 +490,7 @@ export default function EspaceAdminPage() {
         },
         body: JSON.stringify({
           status: statusDrafts[companyId],
+          company_type: typeDrafts[companyId],
           is_featured: Boolean(featuredDrafts[companyId]),
         }),
       }
@@ -667,6 +689,12 @@ export default function EspaceAdminPage() {
           {dataLoading ? (
             <p className="mt-4 text-sm text-slate-400">Chargement du dashboard...</p>
           ) : null}
+
+          {noDashboardData ? (
+            <p className="mt-4 rounded-2xl border border-[#2a3a68] bg-[#121d38] px-4 py-3 text-sm text-slate-300">
+              Aucune donnee admin trouvee. Verifiez le seed de la base ou la variable SUPABASE_SERVICE_ROLE_KEY.
+            </p>
+          ) : null}
         </section>
 
         <section className="rounded-3xl border border-[#223059] bg-[#0b1428] p-6">
@@ -712,6 +740,19 @@ export default function EspaceAdminPage() {
               placeholder="slug-societe"
               className="rounded-2xl border border-[#2a3a68] bg-[#121d38] px-4 py-3 text-sm text-white outline-none focus:border-yellow-400"
             />
+            <select
+              value={companyCreateForm.company_type}
+              onChange={(event) => {
+                setCompanyCreateForm((current) => ({
+                  ...current,
+                  company_type: event.target.value as CompanyLegalType,
+                }));
+              }}
+              className="rounded-2xl border border-[#2a3a68] bg-[#121d38] px-4 py-3 text-sm text-white outline-none focus:border-yellow-400"
+            >
+              <option value="sarl">SARL</option>
+              <option value="startup">Startup</option>
+            </select>
             <input
               value={companyCreateForm.sector}
               onChange={(event) => {
@@ -830,6 +871,9 @@ export default function EspaceAdminPage() {
                     <div>
                       <h3 className="text-lg font-black text-white">{company.name}</h3>
                       <p className="mt-1 text-xs text-slate-300">slug: {company.slug}</p>
+                      <p className="mt-1 text-xs text-slate-300">
+                        Type: {company.company_type === "startup" ? "Startup" : "SARL"}
+                      </p>
                       <p className="mt-1 text-xs text-slate-400">
                         owner_user_id: {company.owner_user_id}
                       </p>
@@ -866,6 +910,20 @@ export default function EspaceAdminPage() {
                       <option value="active">active</option>
                       <option value="inactive">inactive</option>
                       <option value="rejected">rejected</option>
+                    </select>
+
+                    <select
+                      value={typeDrafts[company.id] ?? company.company_type}
+                      onChange={(event) => {
+                        setTypeDrafts((current) => ({
+                          ...current,
+                          [company.id]: event.target.value as CompanyLegalType,
+                        }));
+                      }}
+                      className="rounded-full border border-[#2a3a68] bg-[#0f1830] px-3 py-1.5 text-xs text-white"
+                    >
+                      <option value="sarl">SARL</option>
+                      <option value="startup">Startup</option>
                     </select>
 
                     <label className="flex items-center gap-2 text-xs text-slate-200">
@@ -1107,6 +1165,9 @@ export default function EspaceAdminPage() {
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 <p className="rounded-2xl border border-[#2a3a68] bg-[#121d38] px-4 py-3 text-xs text-slate-300">
                   Statut: <span className="font-semibold text-white">{selectedCompany.status}</span>
+                </p>
+                <p className="rounded-2xl border border-[#2a3a68] bg-[#121d38] px-4 py-3 text-xs text-slate-300">
+                  Type: <span className="font-semibold text-white">{selectedCompany.company_type === "startup" ? "Startup" : "SARL"}</span>
                 </p>
                 <p className="rounded-2xl border border-[#2a3a68] bg-[#121d38] px-4 py-3 text-xs text-slate-300">
                   Secteur: <span className="font-semibold text-white">{selectedCompany.sector || "-"}</span>

@@ -46,12 +46,14 @@ type RequestResult<T, M = Record<string, unknown>> =
 type JobStatus = "draft" | "published" | "closed";
 
 type ApplicationStatus = "pending" | "shortlisted" | "rejected" | "hired";
+type CompanyLegalType = "sarl" | "startup";
 
 type CompanyProfile = {
   id: string;
   owner_user_id: string;
   name: string;
   slug: string;
+  company_type: CompanyLegalType;
   sector: string | null;
   description: string | null;
   address: string | null;
@@ -113,6 +115,7 @@ type CompanyApplication = {
 type ProfileFormState = {
   name: string;
   slug: string;
+  company_type: CompanyLegalType;
   sector: string;
   description: string;
   address: string;
@@ -139,6 +142,7 @@ type JobFormState = {
 const EMPTY_PROFILE_FORM: ProfileFormState = {
   name: "",
   slug: "",
+  company_type: "sarl",
   sector: "",
   description: "",
   address: "",
@@ -237,6 +241,7 @@ function toProfileForm(profile: CompanyProfile): ProfileFormState {
   return {
     name: profile.name,
     slug: profile.slug,
+    company_type: profile.company_type,
     sector: profile.sector ?? "",
     description: profile.description ?? "",
     address: profile.address ?? "",
@@ -460,6 +465,7 @@ export default function EspaceEntreprisePage() {
       body: JSON.stringify({
         name,
         slug,
+        company_type: profileForm.company_type,
         sector: profileForm.sector.trim() || null,
         description: profileForm.description.trim() || null,
         address: profileForm.address.trim() || null,
@@ -764,6 +770,9 @@ export default function EspaceEntreprisePage() {
             <p className="mt-2 text-sm text-slate-300">
               Statut actuel: <span className="font-semibold text-yellow-300">{profile.status}</span>
             </p>
+            <p className="mt-1 text-sm text-slate-300">
+              Type: <span className="font-semibold text-yellow-300">{profile.company_type === "startup" ? "Startup" : "SARL"}</span>
+            </p>
 
             <form onSubmit={handleProfileSubmit} className="mt-5 grid gap-3 md:grid-cols-2">
               <input
@@ -785,6 +794,19 @@ export default function EspaceEntreprisePage() {
                 placeholder="slug-entreprise"
                 className="rounded-2xl border border-[#2a3a68] bg-[#121d38] px-4 py-3 text-sm text-white outline-none focus:border-yellow-400"
               />
+              <select
+                value={profileForm.company_type}
+                onChange={(event) => {
+                  setProfileForm((current) => ({
+                    ...current,
+                    company_type: event.target.value as CompanyLegalType,
+                  }));
+                }}
+                className="rounded-2xl border border-[#2a3a68] bg-[#121d38] px-4 py-3 text-sm text-white outline-none focus:border-yellow-400"
+              >
+                <option value="sarl">SARL</option>
+                <option value="startup">Startup</option>
+              </select>
               <input
                 value={profileForm.sector}
                 onChange={(event) => {

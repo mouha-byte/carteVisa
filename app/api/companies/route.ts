@@ -11,6 +11,7 @@ type CompanyRow = {
   id: string;
   name: string;
   slug: string;
+  company_type: "sarl" | "startup";
   sector: string | null;
   description: string | null;
   city: string | null;
@@ -87,7 +88,7 @@ export async function GET(request: Request) {
 
     const params = new URLSearchParams({
       select:
-        "id,name,slug,sector,description,city,country,logo_url,cover_url,website_url,is_featured,created_at,updated_at",
+        "id,name,slug,company_type,sector,description,city,country,logo_url,cover_url,website_url,is_featured,created_at,updated_at",
       order: SORT_TO_DB_ORDER[sort],
       limit: String(limit),
       offset: String(offset),

@@ -5,6 +5,7 @@ type CompanyRow = {
   id: string;
   name: string;
   slug: string;
+  company_type: "sarl" | "startup";
   sector: string | null;
   description: string | null;
   address: string | null;
@@ -68,7 +69,7 @@ export async function GET(
 
     const companyParams = new URLSearchParams({
       select:
-        "id,name,slug,sector,description,address,city,country,phone,email,website_url,logo_url,cover_url,is_featured,created_at,updated_at",
+        "id,name,slug,company_type,sector,description,address,city,country,phone,email,website_url,logo_url,cover_url,is_featured,created_at,updated_at",
       slug: `eq.${slug}`,
       status: "eq.active",
       limit: "1",

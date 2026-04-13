@@ -17,6 +17,10 @@ begin
     create type public.company_status as enum ('pending', 'active', 'inactive', 'rejected');
   end if;
 
+  if not exists (select 1 from pg_type where typname = 'company_legal_type') then
+    create type public.company_legal_type as enum ('sarl', 'startup');
+  end if;
+
   if not exists (select 1 from pg_type where typname = 'job_status') then
     create type public.job_status as enum ('draft', 'published', 'closed');
   end if;
@@ -49,6 +53,7 @@ create table if not exists public.companies (
   owner_user_id uuid not null references auth.users(id) on delete restrict,
   name text not null,
   slug text not null unique,
+  company_type public.company_legal_type not null default 'sarl',
   sector text,
   description text,
   address text,
@@ -64,6 +69,21 @@ create table if not exists public.companies (
   created_at timestamptz not null default timezone('utc', now()),
   updated_at timestamptz not null default timezone('utc', now())
 );
+
+do $$
+begin
+  if not exists (
+    select 1
+    from information_schema.columns
+    where table_schema = 'public'
+      and table_name = 'companies'
+      and column_name = 'company_type'
+  ) then
+    alter table public.companies
+      add column company_type public.company_legal_type not null default 'sarl';
+  end if;
+end
+$$;
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
@@ -219,6 +239,7 @@ create index if not exists idx_profiles_role on public.profiles(role);
 create index if not exists idx_profiles_company_id on public.profiles(company_id);
 
 create index if not exists idx_companies_status on public.companies(status);
+create index if not exists idx_companies_company_type on public.companies(company_type);
 create index if not exists idx_companies_owner_user_id on public.companies(owner_user_id);
 create index if not exists idx_companies_city on public.companies(city);
 create index if not exists idx_companies_search

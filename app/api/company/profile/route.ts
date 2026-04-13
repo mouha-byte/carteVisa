@@ -15,6 +15,7 @@ type CompanyRow = {
   owner_user_id: string;
   name: string;
   slug: string;
+  company_type: "sarl" | "startup";
   sector: string | null;
   description: string | null;
   address: string | null;
@@ -34,6 +35,7 @@ type CompanyRow = {
 type CompanyWriteData = {
   name?: string;
   slug?: string;
+  company_type?: "sarl" | "startup";
   sector?: string | null;
   description?: string | null;
   address?: string | null;
@@ -47,7 +49,9 @@ type CompanyWriteData = {
 };
 
 const COMPANY_SELECT =
-  "id,owner_user_id,name,slug,sector,description,address,city,country,phone,email,website_url,logo_url,cover_url,status,is_featured,created_at,updated_at";
+  "id,owner_user_id,name,slug,company_type,sector,description,address,city,country,phone,email,website_url,logo_url,cover_url,status,is_featured,created_at,updated_at";
+
+const COMPANY_TYPES: ReadonlyArray<"sarl" | "startup"> = ["sarl", "startup"];
 
 export const runtime = "nodejs";
 
@@ -171,6 +175,18 @@ function parseCompanyPayload(
       );
     } else {
       data.slug = slug;
+    }
+  }
+
+  if ("company_type" in body) {
+    const rawType = body.company_type;
+    if (
+      typeof rawType !== "string" ||
+      !COMPANY_TYPES.includes(rawType as "sarl" | "startup")
+    ) {
+      errors.push("company_type must be one of: sarl, startup.");
+    } else {
+      data.company_type = rawType as "sarl" | "startup";
     }
   }
 

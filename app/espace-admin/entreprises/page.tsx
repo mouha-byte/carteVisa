@@ -44,12 +44,14 @@ type RequestResult<T, M = Record<string, unknown>> =
     };
 
 type CompanyStatus = "pending" | "active" | "inactive" | "rejected";
+type CompanyLegalType = "sarl" | "startup";
 
 type AdminCompany = {
   id: string;
   owner_user_id: string;
   name: string;
   slug: string;
+  company_type: CompanyLegalType;
   sector: string | null;
   description: string | null;
   city: string | null;
@@ -309,6 +311,7 @@ export default function EspaceAdminEntreprisesPage() {
                   </div>
 
                   <div className="mt-3 grid gap-2 text-xs text-slate-300 sm:grid-cols-2">
+                    <p>Type: {company.company_type === "startup" ? "Startup" : "SARL"}</p>
                     <p>Secteur: {company.sector || "-"}</p>
                     <p>Ville: {company.city || "-"}</p>
                     <p>Pays: {company.country || "-"}</p>
