@@ -60,7 +60,7 @@ const MAIN_NAV_LINKS = [
   { label: "Recherche", href: "/#search" },
   { label: "Offres actives", href: "/#jobs" },
   { label: "Categories", href: "/#categories" },
-  { label: "Service", href: "/services" },
+  { label: "Nos services", href: "/services" },
   { label: "Contact", href: "/contact" },
 ];
 

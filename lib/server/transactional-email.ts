@@ -1,4 +1,5 @@
 import { supabasePatch, supabasePost } from "@/lib/server/supabase-rest";
+import nodemailer from "nodemailer";
 
 type EmailEventRow = {
   id: string;
@@ -60,27 +61,80 @@ function escapeHtml(value: string): string {
 function getAdminNotificationEmail(): string | null {
   return (
     process.env.ADMIN_NOTIFICATION_EMAIL ??
+    process.env.SMTP_REPLY_TO_EMAIL ??
+    process.env.SMTP_FROM_EMAIL ??
+    process.env.SMTP_USER ??
     process.env.RESEND_REPLY_TO_EMAIL ??
     process.env.RESEND_FROM_EMAIL ??
     null
   );
 }
 
+type SmtpConfig = {
+  host: string;
+  port: number;
+  secure: boolean;
+  user: string;
+  pass: string;
+  fromEmail: string;
+  replyToEmail: string | null;
+};
+
+function parseBoolean(value: string | undefined, fallback: boolean): boolean {
+  if (!value) {
+    return fallback;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  if (!normalized) {
+    return fallback;
+  }
+
+  return normalized === "1" || normalized === "true" || normalized === "yes";
+}
+
+function getSmtpConfig(): SmtpConfig | null {
+  const host = process.env.SMTP_HOST?.trim() ?? "";
+  const user = process.env.SMTP_USER?.trim() ?? "";
+  const pass = process.env.SMTP_PASS?.trim() ?? "";
+
+  if (!host || !user || !pass) {
+    return null;
+  }
+
+  const configuredPort = Number.parseInt(process.env.SMTP_PORT ?? "", 10);
+  const port = Number.isFinite(configuredPort) ? configuredPort : 587;
+  const secure = parseBoolean(process.env.SMTP_SECURE, port === 465);
+
+  const fromEmailRaw = process.env.SMTP_FROM_EMAIL?.trim() || user;
+  if (!isLikelyEmail(fromEmailRaw)) {
+    throw new Error("Invalid SMTP from email. Set SMTP_FROM_EMAIL or SMTP_USER.");
+  }
+
+  const replyToRaw = process.env.SMTP_REPLY_TO_EMAIL?.trim() ?? null;
+
+  return {
+    host,
+    port,
+    secure,
+    user,
+    pass,
+    fromEmail: fromEmailRaw,
+    replyToEmail: replyToRaw && isLikelyEmail(replyToRaw) ? replyToRaw : null,
+  };
+}
+
 function getResendConfig(): {
   apiKey: string;
   fromEmail: string;
   replyToEmail: string | null;
-} {
+} | null {
   const apiKey = process.env.RESEND_API_KEY;
   const fromEmail = process.env.RESEND_FROM_EMAIL;
   const replyToEmail = process.env.RESEND_REPLY_TO_EMAIL ?? null;
 
-  if (!apiKey) {
-    throw new Error("Missing RESEND_API_KEY.");
-  }
-
-  if (!fromEmail) {
-    throw new Error("Missing RESEND_FROM_EMAIL.");
+  if (!apiKey || !fromEmail) {
+    return null;
   }
 
   return {
@@ -152,7 +206,12 @@ async function sendViaResend(input: {
   html: string;
   text: string;
 }): Promise<string | null> {
-  const { apiKey, fromEmail, replyToEmail } = getResendConfig();
+  const config = getResendConfig();
+  if (!config) {
+    throw new Error("Missing email provider config. Set SMTP_* or RESEND_* variables.");
+  }
+
+  const { apiKey, fromEmail, replyToEmail } = config;
 
   const body: {
     from: string;
@@ -200,6 +259,39 @@ async function sendViaResend(input: {
   }
 }
 
+async function sendViaSmtp(input: {
+  recipientEmail: string;
+  subject: string;
+  html: string;
+  text: string;
+}): Promise<string | null> {
+  const config = getSmtpConfig();
+  if (!config) {
+    throw new Error("Missing SMTP config. Set SMTP_HOST, SMTP_PORT, SMTP_USER, and SMTP_PASS.");
+  }
+
+  const transporter = nodemailer.createTransport({
+    host: config.host,
+    port: config.port,
+    secure: config.secure,
+    auth: {
+      user: config.user,
+      pass: config.pass,
+    },
+  });
+
+  const info = await transporter.sendMail({
+    from: config.fromEmail,
+    to: [input.recipientEmail],
+    subject: input.subject,
+    html: input.html,
+    text: input.text,
+    replyTo: config.replyToEmail ?? undefined,
+  });
+
+  return info.messageId ?? null;
+}
+
 export async function dispatchTransactionalEmail(
   input: DispatchTransactionalEmailInput
 ): Promise<void> {
@@ -214,12 +306,19 @@ export async function dispatchTransactionalEmail(
   );
 
   try {
-    const providerMessageId = await sendViaResend({
-      recipientEmail: input.recipientEmail,
-      subject: input.subject,
-      html: input.html,
-      text: input.text,
-    });
+    const providerMessageId = getSmtpConfig()
+      ? await sendViaSmtp({
+          recipientEmail: input.recipientEmail,
+          subject: input.subject,
+          html: input.html,
+          text: input.text,
+        })
+      : await sendViaResend({
+          recipientEmail: input.recipientEmail,
+          subject: input.subject,
+          html: input.html,
+          text: input.text,
+        });
 
     if (emailEventId) {
       await updateEmailEvent(emailEventId, {

@@ -48,7 +48,10 @@ $required = @(
   'NEXT_PUBLIC_SUPABASE_ANON_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
   'SUPABASE_DB_URL',
-  'RESEND_API_KEY',
+  'SMTP_HOST',
+  'SMTP_PORT',
+  'SMTP_USER',
+  'SMTP_PASS',
   'NOMINATIM_BASE_URL',
   'NOMINATIM_USER_AGENT',
   'SUPABASE_STORAGE_CV_BUCKET',
@@ -132,12 +135,11 @@ try {
 }
 
 try {
-  $resendHeaders = @{ Authorization = "Bearer $($env:RESEND_API_KEY)" }
-  $resp = Invoke-WebRequest -Uri 'https://api.resend.com/domains' -Headers $resendHeaders -Method GET -TimeoutSec 20
-  Add-Result 'resend:domains' ($resp.StatusCode -ge 200 -and $resp.StatusCode -lt 300) "HTTP $($resp.StatusCode)"
+  $smtpPort = if ([string]::IsNullOrWhiteSpace($env:SMTP_PORT)) { 587 } else { [int]$env:SMTP_PORT }
+  $smtpTcpOk = Test-NetConnection -ComputerName $env:SMTP_HOST -Port $smtpPort -InformationLevel Quiet
+  Add-Result 'smtp:tcp' $smtpTcpOk "$($env:SMTP_HOST):$smtpPort"
 } catch {
-  $code = $_.Exception.Response.StatusCode.value__
-  Add-Result 'resend:domains' $false "HTTP $code"
+  Add-Result 'smtp:tcp' $false 'cannot connect to SMTP host/port'
 }
 
 try {

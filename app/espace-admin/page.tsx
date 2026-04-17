@@ -43,6 +43,18 @@ type RequestResult<T, M = Record<string, unknown>> =
       status: number;
     };
 
+type PaginationMeta = {
+  total?: number;
+};
+
+type AdminDashboardStats = {
+  totalCompanies: number;
+  pendingCompanies: number;
+  unhandledContacts: number;
+  newSiteRequests: number;
+  totalApplications: number;
+};
+
 type CompanyStatus = "pending" | "active" | "inactive" | "rejected";
 type CompanyLegalType = "sarl" | "startup";
 
@@ -227,8 +239,13 @@ function formatDate(value: string): string {
   return new Date(value).toLocaleString("fr-FR");
 }
 
+function getMetaTotal(meta?: PaginationMeta): number | null {
+  return typeof meta?.total === "number" ? meta.total : null;
+}
+
 export default function EspaceAdminPage() {
   const router = useRouter();
+  const isStatsDebugEnabled = process.env.NODE_ENV !== "production";
 
   const [authLoading, setAuthLoading] = useState(true);
   const [authError, setAuthError] = useState<string | null>(null);
@@ -242,6 +259,15 @@ export default function EspaceAdminPage() {
   const [contactMessages, setContactMessages] = useState<ContactMessage[]>([]);
   const [siteRequests, setSiteRequests] = useState<SiteRequest[]>([]);
   const [applications, setApplications] = useState<AdminApplication[]>([]);
+  const [stats, setStats] = useState<AdminDashboardStats>({
+    totalCompanies: 0,
+    pendingCompanies: 0,
+    unhandledContacts: 0,
+    newSiteRequests: 0,
+    totalApplications: 0,
+  });
+  const [statsDebugLines, setStatsDebugLines] = useState<string[]>([]);
+  const [statsDebugTimestamp, setStatsDebugTimestamp] = useState<string | null>(null);
 
   const [companyCreateForm, setCompanyCreateForm] = useState<CompanyCreateForm>(
     EMPTY_COMPANY_CREATE_FORM
@@ -263,23 +289,6 @@ export default function EspaceAdminPage() {
   );
   const [selectedCompany, setSelectedCompany] = useState<AdminCompany | null>(null);
 
-  const pendingCompanies = useMemo(
-    () => companies.filter((item) => item.status === "pending").length,
-    [companies]
-  );
-
-  const unhandledContacts = useMemo(
-    () => contactMessages.filter((item) => !item.is_handled).length,
-    [contactMessages]
-  );
-
-  const newSiteRequests = useMemo(
-    () => siteRequests.filter((item) => item.status === "new").length,
-    [siteRequests]
-  );
-
-  const applicationsCount = useMemo(() => applications.length, [applications]);
-
   const noDashboardData = useMemo(
     () =>
       !dataLoading &&
@@ -298,30 +307,81 @@ export default function EspaceAdminPage() {
     setDataLoading(true);
     setDashboardError(null);
 
+    if (isStatsDebugEnabled) {
+      setStatsDebugLines(["Chargement des statistiques admin..."]);
+      setStatsDebugTimestamp(new Date().toLocaleString("fr-FR"));
+    }
+
     const headers = toAuthHeader(token);
 
-    const [companiesResult, contactsResult, requestsResult, applicationsResult] =
-      await Promise.all([
-      requestApi<AdminCompany[]>("/api/admin/companies?limit=100&sort=newest", {
+    const [
+      companiesResult,
+      contactsResult,
+      requestsResult,
+      applicationsResult,
+      totalCompaniesResult,
+      pendingCompaniesResult,
+      unhandledContactsResult,
+      newSiteRequestsResult,
+      totalApplicationsResult,
+    ] = await Promise.all([
+      requestApi<AdminCompany[], PaginationMeta>("/api/admin/companies?limit=12&sort=newest", {
         method: "GET",
         headers,
         cache: "no-store",
       }),
-      requestApi<ContactMessage[]>(
-        "/api/admin/contact-messages?limit=20&sort=newest",
+      requestApi<ContactMessage[], PaginationMeta>(
+        "/api/admin/contact-messages?limit=8&sort=newest",
         {
           method: "GET",
           headers,
           cache: "no-store",
         }
       ),
-      requestApi<SiteRequest[]>("/api/admin/site-requests?limit=20&sort=newest", {
+      requestApi<SiteRequest[], PaginationMeta>("/api/admin/site-requests?limit=8&sort=newest", {
         method: "GET",
         headers,
         cache: "no-store",
       }),
-      requestApi<AdminApplication[]>(
-        "/api/admin/applications?limit=30&sort=newest",
+      requestApi<AdminApplication[], PaginationMeta>(
+        "/api/admin/applications?limit=12&sort=newest",
+        {
+          method: "GET",
+          headers,
+          cache: "no-store",
+        }
+      ),
+      requestApi<AdminCompany[], PaginationMeta>("/api/admin/companies?limit=1&sort=newest", {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      }),
+      requestApi<AdminCompany[], PaginationMeta>(
+        "/api/admin/companies?limit=1&sort=newest&status=pending",
+        {
+          method: "GET",
+          headers,
+          cache: "no-store",
+        }
+      ),
+      requestApi<ContactMessage[], PaginationMeta>(
+        "/api/admin/contact-messages?limit=1&sort=newest&handled=false",
+        {
+          method: "GET",
+          headers,
+          cache: "no-store",
+        }
+      ),
+      requestApi<SiteRequest[], PaginationMeta>(
+        "/api/admin/site-requests?limit=1&sort=newest&status=new",
+        {
+          method: "GET",
+          headers,
+          cache: "no-store",
+        }
+      ),
+      requestApi<AdminApplication[], PaginationMeta>(
+        "/api/admin/applications?limit=1&sort=newest",
         {
           method: "GET",
           headers,
@@ -374,9 +434,92 @@ export default function EspaceAdminPage() {
       firstError = firstError ?? applicationsResult.message;
     }
 
+    const totalCompanies = totalCompaniesResult.ok
+      ? (getMetaTotal(totalCompaniesResult.meta) ?? (companiesResult.ok
+        ? companiesResult.data.length
+        : 0))
+      : companiesResult.ok
+        ? companiesResult.data.length
+        : 0;
+
+    const pendingCompanies = pendingCompaniesResult.ok
+      ? (getMetaTotal(pendingCompaniesResult.meta) ?? (companiesResult.ok
+        ? companiesResult.data.filter((item) => item.status === "pending").length
+        : 0))
+      : companiesResult.ok
+        ? companiesResult.data.filter((item) => item.status === "pending").length
+        : 0;
+
+    const unhandledContacts = unhandledContactsResult.ok
+      ? (getMetaTotal(unhandledContactsResult.meta) ?? (contactsResult.ok
+        ? contactsResult.data.filter((item) => !item.is_handled).length
+        : 0))
+      : contactsResult.ok
+        ? contactsResult.data.filter((item) => !item.is_handled).length
+        : 0;
+
+    const newSiteRequests = newSiteRequestsResult.ok
+      ? (getMetaTotal(newSiteRequestsResult.meta) ?? (requestsResult.ok
+        ? requestsResult.data.filter((item) => item.status === "new").length
+        : 0))
+      : requestsResult.ok
+        ? requestsResult.data.filter((item) => item.status === "new").length
+        : 0;
+
+    const totalApplications = totalApplicationsResult.ok
+      ? (getMetaTotal(totalApplicationsResult.meta) ?? (applicationsResult.ok
+        ? applicationsResult.data.length
+        : 0))
+      : applicationsResult.ok
+        ? applicationsResult.data.length
+        : 0;
+
+    setStats({
+      totalCompanies,
+      pendingCompanies,
+      unhandledContacts,
+      newSiteRequests,
+      totalApplications,
+    });
+
+    if (isStatsDebugEnabled) {
+      const debugLines = [
+        `companies list: ok=${companiesResult.ok} items=${companiesResult.ok ? companiesResult.data.length : 0} totalMeta=${companiesResult.ok ? (getMetaTotal(companiesResult.meta) ?? "n/a") : "n/a"}`,
+        `contacts list: ok=${contactsResult.ok} items=${contactsResult.ok ? contactsResult.data.length : 0} totalMeta=${contactsResult.ok ? (getMetaTotal(contactsResult.meta) ?? "n/a") : "n/a"}`,
+        `requests list: ok=${requestsResult.ok} items=${requestsResult.ok ? requestsResult.data.length : 0} totalMeta=${requestsResult.ok ? (getMetaTotal(requestsResult.meta) ?? "n/a") : "n/a"}`,
+        `applications list: ok=${applicationsResult.ok} items=${applicationsResult.ok ? applicationsResult.data.length : 0} totalMeta=${applicationsResult.ok ? (getMetaTotal(applicationsResult.meta) ?? "n/a") : "n/a"}`,
+        `counts query: companies=${totalCompanies} pendingCompanies=${pendingCompanies} unhandledContacts=${unhandledContacts} newSiteRequests=${newSiteRequests} totalApplications=${totalApplications}`,
+        `dashboardError=${firstError ?? "none"}`,
+      ];
+
+      setStatsDebugLines(debugLines);
+      setStatsDebugTimestamp(new Date().toLocaleString("fr-FR"));
+      console.debug("[Admin dashboard stats debug]", {
+        stats: {
+          totalCompanies,
+          pendingCompanies,
+          unhandledContacts,
+          newSiteRequests,
+          totalApplications,
+        },
+        sources: {
+          companiesResult,
+          contactsResult,
+          requestsResult,
+          applicationsResult,
+          totalCompaniesResult,
+          pendingCompaniesResult,
+          unhandledContactsResult,
+          newSiteRequestsResult,
+          totalApplicationsResult,
+        },
+        dashboardError: firstError,
+      });
+    }
+
     setDashboardError(firstError);
     setDataLoading(false);
-  }, []);
+  }, [isStatsDebugEnabled]);
 
   useEffect(() => {
     let active = true;
@@ -660,24 +803,40 @@ export default function EspaceAdminPage() {
           <div className="mt-5 grid gap-3 md:grid-cols-5">
             <article className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-4">
               <p className="text-xs text-slate-400">Societes total</p>
-              <p className="mt-1 text-2xl font-black text-white">{companies.length}</p>
+              <p className="mt-1 text-2xl font-black text-white">{stats.totalCompanies}</p>
             </article>
             <article className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-4">
               <p className="text-xs text-slate-400">Societes en attente</p>
-              <p className="mt-1 text-2xl font-black text-white">{pendingCompanies}</p>
+              <p className="mt-1 text-2xl font-black text-white">{stats.pendingCompanies}</p>
             </article>
             <article className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-4">
               <p className="text-xs text-slate-400">Messages contact non traites</p>
-              <p className="mt-1 text-2xl font-black text-white">{unhandledContacts}</p>
+              <p className="mt-1 text-2xl font-black text-white">{stats.unhandledContacts}</p>
             </article>
             <article className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-4">
               <p className="text-xs text-slate-400">Demandes site nouvelles</p>
-              <p className="mt-1 text-2xl font-black text-white">{newSiteRequests}</p>
+              <p className="mt-1 text-2xl font-black text-white">{stats.newSiteRequests}</p>
             </article>
             <article className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-4">
               <p className="text-xs text-slate-400">Candidatures recues</p>
-              <p className="mt-1 text-2xl font-black text-white">{applicationsCount}</p>
+              <p className="mt-1 text-2xl font-black text-white">{stats.totalApplications}</p>
             </article>
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-400">Navigation rapide:</span>
+            <Link
+              href="/espace-admin/entreprises"
+              className="rounded-full border border-[#2a3a68] px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300"
+            >
+              Gerer entreprises
+            </Link>
+            <Link
+              href="/espace-admin/candidatures"
+              className="rounded-full border border-[#2a3a68] px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300"
+            >
+              Gerer candidatures
+            </Link>
           </div>
 
           {dashboardError ? (
@@ -695,9 +854,32 @@ export default function EspaceAdminPage() {
               Aucune donnee admin trouvee. Verifiez le seed de la base ou la variable SUPABASE_SERVICE_ROLE_KEY.
             </p>
           ) : null}
+
+          {isStatsDebugEnabled ? (
+            <details className="mt-4 rounded-2xl border border-cyan-500/40 bg-cyan-950/20 px-4 py-3 text-xs text-cyan-100">
+              <summary className="cursor-pointer font-semibold">
+                Debug stats admin (dev)
+              </summary>
+              <div className="mt-2 space-y-1">
+                <p className="text-cyan-200">
+                  Derniere mise a jour: {statsDebugTimestamp ?? "n/a"}
+                </p>
+                {statsDebugLines.length === 0 ? (
+                  <p className="text-cyan-200">Aucune ligne de debug pour le moment.</p>
+                ) : (
+                  statsDebugLines.map((line, index) => (
+                    <p key={`admin-stats-debug-${index}`} className="break-words text-cyan-100">
+                      - {line}
+                    </p>
+                  ))
+                )}
+              </div>
+            </details>
+          ) : null}
         </section>
 
         <section className="rounded-3xl border border-[#223059] bg-[#0b1428] p-6">
+          <p className="text-xs uppercase tracking-[0.12em] text-yellow-300">Gestion entreprises</p>
           <h2 className="text-2xl font-black text-white">Creer un compte societe</h2>
           <p className="mt-2 text-sm text-slate-300">
             Le compte entreprise est cree et affecte par l administration.
@@ -844,6 +1026,7 @@ export default function EspaceAdminPage() {
         </section>
 
         <section className="rounded-3xl border border-[#223059] bg-[#0b1428] p-6">
+          <p className="text-xs uppercase tracking-[0.12em] text-yellow-300">Suivi entreprises</p>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-2xl font-black text-white">Societes (apercu limite)</h2>
             <Link
@@ -969,6 +1152,7 @@ export default function EspaceAdminPage() {
         </section>
 
         <section className="rounded-3xl border border-[#223059] bg-[#0b1428] p-6">
+          <p className="text-xs uppercase tracking-[0.12em] text-yellow-300">Suivi recrutements</p>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-2xl font-black text-white">Candidatures recues (sans UUID)</h2>
             <Link
@@ -1095,7 +1279,12 @@ export default function EspaceAdminPage() {
 
         <section className="grid gap-6 lg:grid-cols-2">
           <article className="rounded-3xl border border-[#223059] bg-[#0b1428] p-6">
-            <h2 className="text-xl font-black text-white">Messages contact recents</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xl font-black text-white">Messages contact recents</h2>
+              <span className="rounded-full border border-[#2a3a68] bg-[#121d38] px-2.5 py-0.5 text-[11px] text-slate-200">
+                Non traites: {stats.unhandledContacts}
+              </span>
+            </div>
             <div className="mt-4 space-y-3">
               {contactMessages.length === 0 ? (
                 <p className="text-sm text-slate-400">Aucun message.</p>
@@ -1115,7 +1304,12 @@ export default function EspaceAdminPage() {
           </article>
 
           <article className="rounded-3xl border border-[#223059] bg-[#0b1428] p-6">
-            <h2 className="text-xl font-black text-white">Demandes creation de site</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-xl font-black text-white">Demandes creation de site</h2>
+              <span className="rounded-full border border-[#2a3a68] bg-[#121d38] px-2.5 py-0.5 text-[11px] text-slate-200">
+                Nouvelles: {stats.newSiteRequests}
+              </span>
+            </div>
             <div className="mt-4 space-y-3">
               {siteRequests.length === 0 ? (
                 <p className="text-sm text-slate-400">Aucune demande.</p>

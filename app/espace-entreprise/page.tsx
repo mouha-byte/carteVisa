@@ -43,6 +43,17 @@ type RequestResult<T, M = Record<string, unknown>> =
       status: number;
     };
 
+type PaginationMeta = {
+  total?: number;
+};
+
+type DashboardStats = {
+  totalJobs: number;
+  publishedJobs: number;
+  pendingApplications: number;
+  totalApplications: number;
+};
+
 type JobStatus = "draft" | "published" | "closed";
 
 type ApplicationStatus = "pending" | "shortlisted" | "rejected" | "hired";
@@ -282,8 +293,13 @@ function formatDate(value: string): string {
   return new Date(value).toLocaleString("fr-FR");
 }
 
+function getMetaTotal(meta?: PaginationMeta): number | null {
+  return typeof meta?.total === "number" ? meta.total : null;
+}
+
 export default function EspaceEntreprisePage() {
   const router = useRouter();
+  const isStatsDebugEnabled = process.env.NODE_ENV !== "production";
 
   const [authLoading, setAuthLoading] = useState(true);
   const [actor, setActor] = useState<AuthenticatedActor | null>(null);
@@ -310,15 +326,31 @@ export default function EspaceEntreprisePage() {
   const [busyMotivationId, setBusyMotivationId] = useState<string | null>(null);
 
   const [statusDrafts, setStatusDrafts] = useState<Record<string, ApplicationStatus>>({});
+  const [stats, setStats] = useState<DashboardStats>({
+    totalJobs: 0,
+    publishedJobs: 0,
+    pendingApplications: 0,
+    totalApplications: 0,
+  });
+  const [statsDebugLines, setStatsDebugLines] = useState<string[]>([]);
+  const [statsDebugTimestamp, setStatsDebugTimestamp] = useState<string | null>(null);
 
-  const publishedJobsCount = useMemo(
-    () => jobs.filter((item) => item.status === "published").length,
-    [jobs]
-  );
-
-  const pendingApplicationsCount = useMemo(
-    () => applications.filter((item) => item.status === "pending").length,
-    [applications]
+  const noDashboardData = useMemo(
+    () =>
+      !dataLoading &&
+      !dashboardError &&
+      stats.totalJobs === 0 &&
+      stats.publishedJobs === 0 &&
+      stats.pendingApplications === 0 &&
+      stats.totalApplications === 0,
+    [
+      dashboardError,
+      dataLoading,
+      stats.pendingApplications,
+      stats.publishedJobs,
+      stats.totalApplications,
+      stats.totalJobs,
+    ]
   );
 
   const dashboardApplications = useMemo(() => applications.slice(0, 6), [applications]);
@@ -327,21 +359,54 @@ export default function EspaceEntreprisePage() {
     setDataLoading(true);
     setDashboardError(null);
 
+    if (isStatsDebugEnabled) {
+      setStatsDebugLines(["Chargement des statistiques entreprise..."]);
+      setStatsDebugTimestamp(new Date().toLocaleString("fr-FR"));
+    }
+
     const headers = toAuthHeader(token);
 
-    const [profileResult, jobsResult, applicationsResult] = await Promise.all([
+    const [
+      profileResult,
+      jobsResult,
+      applicationsResult,
+      totalJobsResult,
+      publishedJobsResult,
+      pendingApplicationsResult,
+    ] = await Promise.all([
       requestApi<CompanyProfile>("/api/company/profile", {
         method: "GET",
         headers,
         cache: "no-store",
       }),
-      requestApi<CompanyJob[]>("/api/company/jobs?limit=100&sort=newest", {
+      requestApi<CompanyJob[], PaginationMeta>("/api/company/jobs?limit=100&sort=newest", {
         method: "GET",
         headers,
         cache: "no-store",
       }),
-      requestApi<CompanyApplication[]>(
+      requestApi<CompanyApplication[], PaginationMeta>(
         "/api/company/applications?limit=100&sort=newest",
+        {
+          method: "GET",
+          headers,
+          cache: "no-store",
+        }
+      ),
+      requestApi<CompanyJob[], PaginationMeta>("/api/company/jobs?limit=1&sort=newest", {
+        method: "GET",
+        headers,
+        cache: "no-store",
+      }),
+      requestApi<CompanyJob[], PaginationMeta>(
+        "/api/company/jobs?limit=1&sort=newest&status=published",
+        {
+          method: "GET",
+          headers,
+          cache: "no-store",
+        }
+      ),
+      requestApi<CompanyApplication[], PaginationMeta>(
+        "/api/company/applications?limit=1&sort=newest&status=pending",
         {
           method: "GET",
           headers,
@@ -385,9 +450,72 @@ export default function EspaceEntreprisePage() {
       setStatusDrafts({});
     }
 
+    const totalJobs = totalJobsResult.ok
+      ? (getMetaTotal(totalJobsResult.meta) ?? (jobsResult.ok ? jobsResult.data.length : 0))
+      : jobsResult.ok
+        ? jobsResult.data.length
+        : 0;
+
+    const publishedJobs = publishedJobsResult.ok
+      ? (getMetaTotal(publishedJobsResult.meta) ?? (jobsResult.ok
+        ? jobsResult.data.filter((item) => item.status === "published").length
+        : 0))
+      : jobsResult.ok
+        ? jobsResult.data.filter((item) => item.status === "published").length
+        : 0;
+
+    const pendingApplications = pendingApplicationsResult.ok
+      ? (getMetaTotal(pendingApplicationsResult.meta) ?? (applicationsResult.ok
+        ? applicationsResult.data.filter((item) => item.status === "pending").length
+        : 0))
+      : applicationsResult.ok
+        ? applicationsResult.data.filter((item) => item.status === "pending").length
+        : 0;
+
+    const totalApplications = applicationsResult.ok
+      ? (getMetaTotal(applicationsResult.meta) ?? applicationsResult.data.length)
+      : 0;
+
+    setStats({
+      totalJobs,
+      publishedJobs,
+      pendingApplications,
+      totalApplications,
+    });
+
+    if (isStatsDebugEnabled) {
+      const debugLines = [
+        `profile: ok=${profileResult.ok} status=${profileResult.status}`,
+        `jobs list: ok=${jobsResult.ok} items=${jobsResult.ok ? jobsResult.data.length : 0} totalMeta=${jobsResult.ok ? (getMetaTotal(jobsResult.meta) ?? "n/a") : "n/a"}`,
+        `applications list: ok=${applicationsResult.ok} items=${applicationsResult.ok ? applicationsResult.data.length : 0} totalMeta=${applicationsResult.ok ? (getMetaTotal(applicationsResult.meta) ?? "n/a") : "n/a"}`,
+        `counts query: totalJobs=${totalJobs} publishedJobs=${publishedJobs} pendingApplications=${pendingApplications} totalApplications=${totalApplications}`,
+        `dashboardError=${firstError ?? "none"}`,
+      ];
+
+      setStatsDebugLines(debugLines);
+      setStatsDebugTimestamp(new Date().toLocaleString("fr-FR"));
+      console.debug("[Entreprise dashboard stats debug]", {
+        stats: {
+          totalJobs,
+          publishedJobs,
+          pendingApplications,
+          totalApplications,
+        },
+        sources: {
+          profileResult,
+          jobsResult,
+          applicationsResult,
+          totalJobsResult,
+          publishedJobsResult,
+          pendingApplicationsResult,
+        },
+        dashboardError: firstError,
+      });
+    }
+
     setDashboardError(firstError);
     setDataLoading(false);
-  }, []);
+  }, [isStatsDebugEnabled]);
 
   useEffect(() => {
     let active = true;
@@ -738,19 +866,45 @@ export default function EspaceEntreprisePage() {
             </button>
           </div>
 
-          <div className="mt-5 grid gap-3 sm:grid-cols-3">
+          <div className="mt-5 grid gap-3 sm:grid-cols-4">
             <article className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-4">
               <p className="text-xs text-slate-400">Offres total</p>
-              <p className="mt-1 text-2xl font-black text-white">{jobs.length}</p>
+              <p className="mt-1 text-2xl font-black text-white">{stats.totalJobs}</p>
             </article>
             <article className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-4">
               <p className="text-xs text-slate-400">Offres publiees</p>
-              <p className="mt-1 text-2xl font-black text-white">{publishedJobsCount}</p>
+              <p className="mt-1 text-2xl font-black text-white">{stats.publishedJobs}</p>
             </article>
             <article className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-4">
               <p className="text-xs text-slate-400">Candidatures en attente</p>
-              <p className="mt-1 text-2xl font-black text-white">{pendingApplicationsCount}</p>
+              <p className="mt-1 text-2xl font-black text-white">{stats.pendingApplications}</p>
             </article>
+            <article className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-4">
+              <p className="text-xs text-slate-400">Candidatures total</p>
+              <p className="mt-1 text-2xl font-black text-white">{stats.totalApplications}</p>
+            </article>
+          </div>
+
+          <div className="mt-5 flex flex-wrap items-center gap-2">
+            <span className="text-xs text-slate-400">Navigation rapide:</span>
+            <a
+              href="#profil-entreprise"
+              className="rounded-full border border-[#2a3a68] px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300"
+            >
+              Profil
+            </a>
+            <a
+              href="#gestion-offres"
+              className="rounded-full border border-[#2a3a68] px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300"
+            >
+              Offres
+            </a>
+            <a
+              href="#candidatures-entreprise"
+              className="rounded-full border border-[#2a3a68] px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300"
+            >
+              Candidatures
+            </a>
           </div>
 
           {dashboardError ? (
@@ -762,10 +916,45 @@ export default function EspaceEntreprisePage() {
           {dataLoading ? (
             <p className="mt-4 text-sm text-slate-400">Chargement des donnees...</p>
           ) : null}
+
+          {noDashboardData ? (
+            <p className="mt-4 rounded-2xl border border-[#2a3a68] bg-[#121d38] px-4 py-3 text-sm text-slate-300">
+              Aucune statistique disponible pour le moment. Verifiez que votre compte est bien lie a une entreprise et qu il existe des offres/candidatures.
+            </p>
+          ) : null}
+
+          {isStatsDebugEnabled ? (
+            <details className="mt-4 rounded-2xl border border-cyan-500/40 bg-cyan-950/20 px-4 py-3 text-xs text-cyan-100">
+              <summary className="cursor-pointer font-semibold">
+                Debug stats entreprise (dev)
+              </summary>
+              <div className="mt-2 space-y-1">
+                <p className="text-cyan-200">
+                  Derniere mise a jour: {statsDebugTimestamp ?? "n/a"}
+                </p>
+                {statsDebugLines.length === 0 ? (
+                  <p className="text-cyan-200">Aucune ligne de debug pour le moment.</p>
+                ) : (
+                  statsDebugLines.map((line, index) => (
+                    <p
+                      key={`entreprise-stats-debug-${index}`}
+                      className="break-words text-cyan-100"
+                    >
+                      - {line}
+                    </p>
+                  ))
+                )}
+              </div>
+            </details>
+          ) : null}
         </section>
 
         {profile ? (
-          <section className="rounded-3xl border border-[#223059] bg-[#0b1428] p-6">
+          <section
+            id="profil-entreprise"
+            className="rounded-3xl border border-[#223059] bg-[#0b1428] p-6"
+          >
+            <p className="text-xs uppercase tracking-[0.12em] text-yellow-300">Identite entreprise</p>
             <h2 className="text-2xl font-black text-white">Profil entreprise</h2>
             <p className="mt-2 text-sm text-slate-300">
               Statut actuel: <span className="font-semibold text-yellow-300">{profile.status}</span>
@@ -908,7 +1097,11 @@ export default function EspaceEntreprisePage() {
           </section>
         ) : null}
 
-        <section className="rounded-3xl border border-[#223059] bg-[#0b1428] p-6">
+        <section
+          id="gestion-offres"
+          className="rounded-3xl border border-[#223059] bg-[#0b1428] p-6"
+        >
+          <p className="text-xs uppercase tracking-[0.12em] text-yellow-300">Gestion offres</p>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-2xl font-black text-white">
               {editingJobId ? "Modifier une offre" : "Creer une offre"}
@@ -1033,7 +1226,12 @@ export default function EspaceEntreprisePage() {
         </section>
 
         <section className="rounded-3xl border border-[#223059] bg-[#0b1428] p-6">
-          <h2 className="text-2xl font-black text-white">Vos offres (CRUD)</h2>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-2xl font-black text-white">Vos offres (CRUD)</h2>
+            <span className="rounded-full border border-[#2a3a68] bg-[#121d38] px-2.5 py-0.5 text-xs text-slate-200">
+              Total: {stats.totalJobs}
+            </span>
+          </div>
           <div className="mt-4 grid gap-4">
             {jobs.length === 0 ? (
               <p className="rounded-2xl border border-dashed border-[#2a3a68] px-4 py-8 text-sm text-slate-400">
@@ -1088,14 +1286,18 @@ export default function EspaceEntreprisePage() {
           </div>
         </section>
 
-        <section className="rounded-3xl border border-[#223059] bg-[#0b1428] p-6">
+        <section
+          id="candidatures-entreprise"
+          className="rounded-3xl border border-[#223059] bg-[#0b1428] p-6"
+        >
+          <p className="text-xs uppercase tracking-[0.12em] text-yellow-300">Gestion candidatures</p>
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-2xl font-black text-white">Candidatures recues</h2>
             <Link
               href="/espace-entreprise/candidatures"
               className="rounded-full border border-yellow-500 px-4 py-2 text-xs font-semibold text-yellow-300"
             >
-              Voir plus ({applications.length})
+              Voir plus ({stats.totalApplications})
             </Link>
           </div>
           <p className="mt-2 text-sm text-slate-300">

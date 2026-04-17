@@ -12,6 +12,11 @@ export async function GET() {
     supabaseUrlConfigured: Boolean(config.supabaseUrl),
     anonKeyConfigured: Boolean(config.anonKey),
     serviceRoleConfigured: Boolean(config.serviceRoleKey),
+    smtpConfigured: Boolean(
+      process.env.SMTP_HOST &&
+        process.env.SMTP_USER &&
+        process.env.SMTP_PASS
+    ),
     sourceKeys: config.sourceKeys,
     supabaseHost: config.supabaseUrl
       ? (() => {
