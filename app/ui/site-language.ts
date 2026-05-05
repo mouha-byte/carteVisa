@@ -279,6 +279,7 @@ const AR_DICTIONARY: LanguageDictionary = {
 };
 
 const EN_EXTRA_DICTIONARY: LanguageDictionary = {
+  Accueil: "Home",
   "Pack Visibilite Premium": "Premium Visibility Pack",
   "Mettez votre entreprise en avant des le premier ecran.": "Put your company in the spotlight from the first screen.",
   "Boost Recrutement": "Recruitment Boost",
@@ -472,13 +473,17 @@ const EN_EXTRA_DICTIONARY: LanguageDictionary = {
   "Comment est calcule le tarif ?": "How is pricing calculated?",
   "Le tarif depend du perimetre, du niveau d expertise mobilise et du delai demande.": "Pricing depends on scope, expertise level, and requested timeline.",
   "Verification anti-spam": "Anti-spam verification",
+  "Saisissez les caracteres affiches": "Enter the displayed characters",
+  "Entrez le code": "Enter the code",
   "Calculez:": "Calculate:",
   "Votre reponse": "Your answer",
   "Actualiser": "Refresh",
   "Verification anti-spam invalide. Merci de recalculer la somme.": "Invalid anti-spam verification. Please recalculate the sum.",
+  "Verification anti-spam invalide. Merci de saisir le code affiche.": "Invalid anti-spam verification. Please enter the displayed code.",
 };
 
 const AR_EXTRA_DICTIONARY: LanguageDictionary = {
+  Accueil: "الرئيسية",
   "Pack Visibilite Premium": "باقة الظهور المميز",
   "Mettez votre entreprise en avant des le premier ecran.": "اجعل شركتك بارزة من الشاشة الأولى.",
   "Boost Recrutement": "تعزيز التوظيف",
@@ -765,6 +770,7 @@ const DYNAMIC_RULES: Record<Exclude<SiteLanguage, "fr">, DynamicRule[]> = {
 };
 
 const TEXT_ORIGINALS = new WeakMap<Text, string>();
+const TEXT_TRANSLATIONS = new WeakMap<Text, string>();
 const ATTR_ORIGINALS = new WeakMap<Element, Map<string, string>>();
 let originalDocumentTitle: string | null = null;
 
@@ -933,12 +939,34 @@ function walkAndTranslateTextNodes(root: ParentNode, language: SiteLanguage): vo
     const textNode = current as Text;
 
     if (!shouldSkipElement(textNode.parentElement)) {
+      const currentValue = textNode.data;
+      const storedTranslation = TEXT_TRANSLATIONS.get(textNode);
+
       if (!TEXT_ORIGINALS.has(textNode)) {
-        TEXT_ORIGINALS.set(textNode, textNode.data);
+        TEXT_ORIGINALS.set(textNode, currentValue);
       }
 
-      const original = TEXT_ORIGINALS.get(textNode) ?? textNode.data;
-      const next = language === "fr" ? original : translateLiteral(original, language);
+      let original = TEXT_ORIGINALS.get(textNode) ?? currentValue;
+
+      if (language === "fr") {
+        if (storedTranslation && currentValue === storedTranslation) {
+          textNode.data = original;
+        } else {
+          TEXT_ORIGINALS.set(textNode, currentValue);
+        }
+
+        TEXT_TRANSLATIONS.delete(textNode);
+        current = walker.nextNode();
+        continue;
+      }
+
+      if (!storedTranslation || currentValue !== storedTranslation) {
+        original = currentValue;
+        TEXT_ORIGINALS.set(textNode, original);
+      }
+
+      const next = translateLiteral(original, language);
+      TEXT_TRANSLATIONS.set(textNode, next);
 
       if (next !== textNode.data) {
         textNode.data = next;
@@ -973,8 +1001,25 @@ function translateAttributes(root: ParentNode, language: SiteLanguage): void {
         storedAttrs.set(attribute, currentValue);
       }
 
-      const original = storedAttrs.get(attribute) ?? currentValue;
-      const next = language === "fr" ? original : translateLiteral(original, language);
+      let original = storedAttrs.get(attribute) ?? currentValue;
+
+      if (language === "fr") {
+        if (currentValue !== original) {
+          element.setAttribute(attribute, original);
+        } else {
+          storedAttrs.set(attribute, currentValue);
+        }
+
+        continue;
+      }
+
+      const expectedTranslated = translateLiteral(original, language);
+      if (currentValue !== expectedTranslated) {
+        original = currentValue;
+        storedAttrs.set(attribute, original);
+      }
+
+      const next = translateLiteral(original, language);
 
       if (next !== currentValue) {
         element.setAttribute(attribute, next);
@@ -993,8 +1038,25 @@ function translateAttributes(root: ParentNode, language: SiteLanguage): void {
         storedAttrs.set("__input_value", element.value);
       }
 
-      const originalValue = storedAttrs.get("__input_value") ?? element.value;
-      const nextValue = language === "fr" ? originalValue : translateLiteral(originalValue, language);
+      let originalValue = storedAttrs.get("__input_value") ?? element.value;
+
+      if (language === "fr") {
+        if (element.value !== originalValue) {
+          element.value = originalValue;
+        } else {
+          storedAttrs.set("__input_value", element.value);
+        }
+
+        continue;
+      }
+
+      const expectedTranslated = translateLiteral(originalValue, language);
+      if (element.value !== expectedTranslated) {
+        originalValue = element.value;
+        storedAttrs.set("__input_value", originalValue);
+      }
+
+      const nextValue = translateLiteral(originalValue, language);
 
       if (nextValue !== element.value) {
         element.value = nextValue;

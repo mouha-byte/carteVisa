@@ -190,11 +190,11 @@ export default function CreateSitePage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#05070d] text-slate-100">
+    <div className="app-shell">
       <SiteBanner />
 
-      <main className="mx-auto w-full max-w-[92rem] px-[var(--page-gutter)] py-8 md:py-12">
-        <section className="reveal-up rounded-3xl border border-[#223059] bg-[#0a1120] p-6 md:p-10">
+      <main className="page-frame page-stack">
+        <section className="reveal-up glass-panel rounded-[2rem] p-6 md:p-10">
           <p className="text-xs font-semibold uppercase tracking-[0.14em] text-[#21c7b8]">
             Creation de site web
           </p>
@@ -207,11 +207,11 @@ export default function CreateSitePage() {
           </p>
         </section>
 
-        <section className="mt-6 reveal-up reveal-delay-1 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <section className="reveal-up reveal-delay-1 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           {TEMPLATE_MODELS.map((model) => (
             <article
               key={model.title}
-              className="overflow-hidden rounded-3xl border border-[#223059] bg-[#0b1428]"
+              className="glass-panel-soft overflow-hidden rounded-[1.75rem]"
             >
               <div
                 className="h-36 w-full bg-cover bg-center"
@@ -235,33 +235,7 @@ export default function CreateSitePage() {
           ))}
         </section>
 
-        <section className="mt-6 reveal-up reveal-delay-2 rounded-3xl border border-[#223059] bg-[#0b1428] p-5 md:p-6">
-          <div className="mb-4 flex items-center justify-between gap-2">
-            <h2 className="text-xl font-black text-white">Autres sites live</h2>
-            <span className="rounded-full border border-[#2a3a68] px-3 py-1 text-xs text-slate-300">
-              {EXTRA_LIVE_LINKS.length} references
-            </span>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            {EXTRA_LIVE_LINKS.map((item) => (
-              <article key={item.title} className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-4">
-                <p className="text-sm font-black text-white">{item.title}</p>
-                <p className="mt-2 text-xs text-slate-300">{item.description}</p>
-                <a
-                  href={item.liveUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="mt-3 inline-flex rounded-full border border-yellow-500 px-3 py-1.5 text-xs font-semibold text-yellow-300 transition hover:bg-yellow-500 hover:text-[#05070d]"
-                >
-                  Ouvrir le live
-                </a>
-              </article>
-            ))}
-          </div>
-        </section>
-
-        <section className="mt-6 reveal-up reveal-delay-4 rounded-3xl border border-[#223059] bg-[#0b1428] p-5 md:p-6">
+        <section className="reveal-up reveal-delay-2 rounded-3xl border border-[#223059] bg-[#0b1428] p-5 md:p-6">
           <h2 className="text-xl font-black text-white">Demande de creation</h2>
           <p className="mt-2 text-sm text-slate-400">
             Ce formulaire envoie une demande complete a l API de creation de site.
@@ -372,6 +346,32 @@ export default function CreateSitePage() {
               </p>
             ) : null}
           </form>
+        </section>
+
+        <section className="reveal-up reveal-delay-3 rounded-3xl border border-[#223059] bg-[#0b1428] p-5 md:p-6">
+          <div className="mb-4 flex items-center justify-between gap-2">
+            <h2 className="text-xl font-black text-white">Autres sites live</h2>
+            <span className="rounded-full border border-[#2a3a68] px-3 py-1 text-xs text-slate-300">
+              {EXTRA_LIVE_LINKS.length} references
+            </span>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {EXTRA_LIVE_LINKS.map((item) => (
+              <article key={item.title} className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-4">
+                <p className="text-sm font-black text-white">{item.title}</p>
+                <p className="mt-2 text-xs text-slate-300">{item.description}</p>
+                <a
+                  href={item.liveUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-3 inline-flex rounded-full border border-yellow-500 px-3 py-1.5 text-xs font-semibold text-yellow-300 transition hover:bg-yellow-500 hover:text-[#05070d]"
+                >
+                  Ouvrir le live
+                </a>
+              </article>
+            ))}
+          </div>
         </section>
       </main>
     </div>

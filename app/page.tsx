@@ -314,7 +314,7 @@ function CompanyCoverCard({ company }: { company: CompanyCard }) {
           </div>
         </div>
 
-        <div className="absolute inset-x-4 bottom-4 rounded-2xl border border-white/20 bg-[#05070d]/70 px-4 py-3 backdrop-blur">
+        <div className="company-cover-caption absolute inset-x-4 bottom-4 rounded-2xl border border-white/20 bg-[#05070d]/70 px-4 py-3 backdrop-blur">
           <p className="truncate text-base font-black text-white">{company.name}</p>
           <p className="mt-1 max-h-0 overflow-hidden text-xs text-slate-200 opacity-0 transition-all duration-300 group-hover:max-h-8 group-hover:opacity-100 group-focus-visible:max-h-8 group-focus-visible:opacity-100">
             {typeLabel + " • " + (company.city || company.sector || "Ville non specifiee") + " • " + company.open_jobs_count + " poste(s)"}
@@ -390,6 +390,7 @@ export default function HomePage() {
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [isMobileViewport, setIsMobileViewport] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -516,6 +517,21 @@ export default function HomePage() {
   }, [loadLandingData]);
 
   useEffect(() => {
+    const mediaQuery = window.matchMedia("(max-width: 640px)");
+
+    const syncViewport = () => {
+      setIsMobileViewport(mediaQuery.matches);
+    };
+
+    syncViewport();
+    mediaQuery.addEventListener("change", syncViewport);
+
+    return () => {
+      mediaQuery.removeEventListener("change", syncViewport);
+    };
+  }, []);
+
+  useEffect(() => {
     const onScroll = () => {
       setShowBackToTop(window.scrollY > 360);
     };
@@ -593,11 +609,11 @@ export default function HomePage() {
   }, [searchKeyword, searchType, searchCategory, searchCity]);
 
   return (
-    <div className="min-h-screen bg-[#05070d] text-slate-100">
+    <div className="app-shell">
       <SiteBanner />
 
-      <main id="top" className="mx-auto flex w-full max-w-[92rem] flex-col gap-14 px-[var(--page-gutter)] py-9 md:gap-16 md:py-14">
-        <section id="hero-media" className="reveal-up space-y-5">
+      <main id="top" className="page-frame page-stack gap-8 sm:gap-10 md:gap-12">
+        <section id="hero-media" className="hero-contrast reveal-soft space-y-6 sm:space-y-7">
           <div className="overflow-hidden rounded-3xl border border-[#223058] bg-[#0b1326] shadow-[0_20px_50px_rgba(3,6,20,0.55)]">
             <div className="relative min-h-[280px] w-full md:min-h-[420px]">
               <video
@@ -625,7 +641,7 @@ export default function HomePage() {
                     Design simple, dynamique et visuel
                   </h1>
                   <p className="max-w-3xl text-sm text-slate-200 sm:text-base md:text-lg">
-                    Design simple, dynamique et visuel pour presenter les entreprises avec des medias dominants. Pensee pour un affichage fluide sur mobile et desktop.
+                    Une interface claire pour presenter les entreprises et leurs contenus visuels, avec une experience fluide sur mobile et desktop.
                   </p>
                   <div className="flex flex-wrap items-center gap-3 pt-1">
                     <Link
@@ -641,7 +657,7 @@ export default function HomePage() {
                       Publier mon entreprise
                     </Link>
                     <span className="rounded-full border border-[#2a3a68] bg-[#05070d]/70 px-3 py-1 text-[11px] font-semibold text-slate-300">
-                      Responsive mobile et desktop
+                      Experience fluide sur mobile et desktop
                     </span>
                   </div>
                 </div>
@@ -649,12 +665,12 @@ export default function HomePage() {
             </div>
           </div>
 
-          <p className="text-center text-sm font-semibold text-slate-200 sm:text-base md:text-lg">
-            Plateforme orientee business: decouvrez les entreprises recentes, les medias dominants et les offres actives sur tous les formats d ecran.
+          <p className="hero-subline text-center text-sm font-semibold text-slate-200 sm:text-base md:text-lg">
+            Plateforme orientee business: decouvrez les entreprises recentes, les contenus visuels et les offres actives sur tous les formats d ecran.
           </p>
         </section>
 
-        <section className="reveal-up reveal-delay-1 space-y-4 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-6 md:p-8">
+        <section className="reveal-up reveal-delay-1 space-y-5 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-7 md:p-9">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="headline-special headline-accent text-xl font-black md:text-2xl">
               Medias secondaires
@@ -698,7 +714,7 @@ export default function HomePage() {
 
         <section
           id="search"
-          className="reveal-up reveal-delay-2 rounded-3xl border border-[#1f2a4d] bg-[#0a1120] p-7 md:p-10"
+          className="reveal-soft reveal-delay-1 rounded-3xl border border-[#1f2a4d] bg-[#0a1120] p-8 md:p-11"
         >
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="headline-special headline-accent text-3xl font-black md:text-4xl">
@@ -709,7 +725,7 @@ export default function HomePage() {
             </span>
           </div>
 
-          <div className="grid gap-4 lg:grid-cols-12">
+          <div className="grid gap-5 lg:grid-cols-12">
             <input
               value={searchKeyword}
               onChange={(event) => {
@@ -796,11 +812,11 @@ export default function HomePage() {
           ) : null}
 
           {!isSearching && searchResults.length > 0 ? (
-            <div className="mt-5 grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-6 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
               {searchResults.map((item) => (
                 <article
                   key={`${item.type}-${item.id}`}
-                  className="rounded-2xl border border-[#2a3a68] bg-[#121d38] p-6"
+                  className="card-tilt-hover reveal-soft rounded-2xl border border-[#2a3a68] bg-[#121d38] p-6"
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="rounded-full border border-yellow-500/70 px-2 py-1 text-[11px] font-semibold text-yellow-300">
@@ -853,8 +869,8 @@ export default function HomePage() {
           ) : null}
         </section>
 
-        <section id="jobs" className="reveal-up reveal-delay-3 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-7 md:p-10">
-          <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+        <section id="jobs" className="reveal-soft reveal-delay-2 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-8 md:p-11">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <h2 className="headline-special headline-accent text-3xl font-black">Offres actives</h2>
             <div className="flex items-center gap-2">
               <span className="rounded-full border border-[#2a3a68] px-3 py-1 text-xs text-slate-300">
@@ -879,9 +895,9 @@ export default function HomePage() {
               Aucune offre active pour le moment.
             </p>
           ) : (
-            <div className="grid gap-7 md:grid-cols-2">
+            <div className="grid gap-8 md:grid-cols-2">
               {visibleJobs.map((job) => (
-                <article key={job.id} className="overflow-hidden rounded-2xl border border-[#2a3a68] bg-[#121d38]">
+                <article key={job.id} className="card-tilt-hover reveal-soft overflow-hidden rounded-2xl border border-[#2a3a68] bg-[#121d38]">
                   <div className="relative h-36 w-full bg-[#1a2749]">
                     <Image
                       src={job.company?.cover_url || DEFAULT_COMPANY_COVER}
@@ -929,8 +945,8 @@ export default function HomePage() {
           ) : null}
         </section>
 
-        <section id="categories" className="reveal-up reveal-delay-4 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-7 md:p-10">
-          <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <section id="categories" className="reveal-soft reveal-delay-3 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-8 md:p-11">
+          <div className="mb-7 flex flex-wrap items-center justify-between gap-3">
             <h2 className="headline-special headline-accent text-3xl font-black">
               Entreprises par categorie
             </h2>
@@ -958,10 +974,15 @@ export default function HomePage() {
             </p>
           ) : null}
 
-          <div className="space-y-10">
-            {visibleCategorySections.map((section) => (
-              <article key={section.category.id} className="rounded-2xl border border-[#2a3a68] bg-[#101a31] p-6 md:p-7">
-                <div className="mb-4 flex items-start justify-between gap-3">
+          <div className="space-y-12">
+            {visibleCategorySections.map((section) => {
+              const companiesToRender = isMobileViewport
+                ? section.companies.slice(0, 1)
+                : section.companies;
+
+              return (
+              <article key={section.category.id} className="reveal-soft rounded-2xl border border-[#2a3a68] bg-[#101a31] p-7 md:p-8">
+                <div className="mb-5 flex items-start justify-between gap-4">
                   <div>
                     <h3 className="text-2xl font-black text-white">{section.category.name}</h3>
                     <p className="mt-1 text-base text-slate-300">
@@ -976,20 +997,21 @@ export default function HomePage() {
                   </Link>
                 </div>
 
-                <div className="grid gap-7 md:grid-cols-2">
-                  {section.companies.map((company) => (
+                <div className="grid gap-6 md:grid-cols-2 md:gap-8">
+                  {companiesToRender.map((company) => (
                     <CompanyCoverCard key={company.id} company={company} />
                   ))}
                 </div>
               </article>
-            ))}
+              );
+            })}
           </div>
         </section>
 
-        <section className="grid gap-6 md:grid-cols-2">
+        <section className="reveal-soft reveal-delay-4 grid gap-7 md:grid-cols-2 md:gap-8">
           <Link
             href="/contact"
-            className="rounded-3xl border border-[#1f2a4d] bg-[#0a1120] p-7 transition hover:border-yellow-500"
+            className="card-tilt-hover rounded-3xl border border-[#1f2a4d] bg-[#0a1120] p-7 transition hover:border-yellow-500"
           >
             <p className="text-xs uppercase tracking-[0.12em] text-yellow-300">Contact</p>
             <h3 className="mt-3 text-3xl font-black text-white">Contact professionnel</h3>
@@ -1000,7 +1022,7 @@ export default function HomePage() {
 
           <Link
             href="/create-site"
-            className="rounded-3xl border border-[#1f2a4d] bg-[#0a1120] p-7 transition hover:border-[#21c7b8]"
+            className="card-tilt-hover rounded-3xl border border-[#1f2a4d] bg-[#0a1120] p-7 transition hover:border-[#21c7b8]"
           >
             <p className="text-xs uppercase tracking-[0.12em] text-[#21c7b8]">Creation de site</p>
             <h3 className="mt-3 text-3xl font-black text-white">Modeles web et demos live</h3>
@@ -1012,8 +1034,8 @@ export default function HomePage() {
       </main>
 
       <footer className="border-t border-[#16203a] bg-[#04060b]">
-        <div className="mx-auto grid w-full max-w-[92rem] gap-8 px-[var(--page-gutter)] py-10 md:grid-cols-4">
-          <div>
+        <div className="mx-auto grid w-full max-w-[92rem] gap-6 px-[var(--page-gutter)] py-10 sm:grid-cols-2 md:grid-cols-4">
+          <div className="sm:col-span-2 md:col-span-1">
             <div className="flex items-center gap-3">
               <Image
                 src="/cartevisite-logo.png"
@@ -1029,7 +1051,7 @@ export default function HomePage() {
             </p>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-bold uppercase tracking-[0.1em] text-slate-300">Navigation</p>
             <div className="mt-3 flex flex-col gap-2 text-sm text-slate-400">
               <a href="#search" className="hover:text-yellow-300">Entreprises recentes</a>
@@ -1038,7 +1060,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div>
+          <div className="min-w-0">
             <p className="text-sm font-bold uppercase tracking-[0.1em] text-slate-300">Categories</p>
             <div className="mt-3 flex flex-col gap-2 text-sm text-slate-400">
               {categories.slice(0, 5).map((category) => (
@@ -1049,7 +1071,7 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div>
+          <div className="min-w-0 sm:col-span-2 md:col-span-1">
             <p className="text-sm font-bold uppercase tracking-[0.1em] text-slate-300">Contact</p>
             <div className="mt-3 flex flex-col gap-2 text-sm text-slate-400">
               <Link href="/contact" className="hover:text-yellow-300">Page contact</Link>

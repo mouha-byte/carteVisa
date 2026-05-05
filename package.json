@@ -13,6 +13,8 @@
     "test:integration": "vitest run tests/integration"
   },
   "dependencies": {
+    "@capacitor/cli": "^8.3.1",
+    "@capacitor/core": "^8.3.1",
     "next": "16.2.2",
     "nodemailer": "^8.0.5",
     "react": "19.2.4",

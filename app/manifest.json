@@ -1,0 +1,22 @@
+{
+  "name": "CarteVisite",
+  "short_name": "CarteVisite",
+  "description": "Application CarteVisite",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#0f766e",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "cartevisite-logo.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "cartevisite-logo.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

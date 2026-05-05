@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   loadSiteLanguageFromStorage,
@@ -56,7 +57,7 @@ type BannerAuthUser = {
 const AUTH_SESSION_STORAGE_KEY = "cartevisite.auth.session.v1";
 
 const MAIN_NAV_LINKS = [
-  { label: "Publicite", href: "/#hero-media" },
+  { label: "Accueil", href: "/" },
   { label: "Recherche", href: "/#search" },
   { label: "Offres actives", href: "/#jobs" },
   { label: "Categories", href: "/#categories" },
@@ -273,6 +274,11 @@ export function SiteBanner() {
   const [activeTheme, setActiveTheme] = useState<SiteTheme>("dark");
   const [isLanguageAnimating, setIsLanguageAnimating] = useState(false);
   const [isThemeAnimating, setIsThemeAnimating] = useState(false);
+  const [isScrolled, setIsScrolled] = useState(false);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [showIntro, setShowIntro] = useState(false);
+  const pathname = usePathname();
 
   const languageAnimTimeoutRef = useRef<number | null>(null);
   const themeAnimTimeoutRef = useRef<number | null>(null);
@@ -384,6 +390,64 @@ export function SiteBanner() {
     };
   }, []);
 
+  useEffect(() => {
+    if (typeof window === "undefined") {
+      return;
+    }
+
+    if (pathname !== "/") {
+      const resetTimer = window.setTimeout(() => {
+        setShowIntro(false);
+      }, 0);
+
+      return () => {
+        window.clearTimeout(resetTimer);
+      };
+    }
+
+    const startTimer = window.setTimeout(() => {
+      setShowIntro(true);
+    }, 0);
+
+    const timer = window.setTimeout(() => {
+      setShowIntro(false);
+    }, 2000);
+
+    return () => {
+      window.clearTimeout(startTimer);
+      window.clearTimeout(timer);
+    };
+  }, [pathname]);
+
+  useEffect(() => {
+    const onScroll = () => {
+      const currentY = window.scrollY;
+      setIsScrolled((current) => {
+        // Use hysteresis to avoid rapid toggling/flicker around the threshold.
+        if (!current && currentY > 96) {
+          return true;
+        }
+
+        if (current && currentY < 56) {
+          return false;
+        }
+
+        return current;
+      });
+
+      if (currentY < 56) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    onScroll();
+    window.addEventListener("scroll", onScroll, { passive: true });
+
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+    };
+  }, []);
+
   const avatarLetter = useMemo(() => buildAvatarLetter(authUser), [authUser]);
 
   const isDarkTheme = activeTheme === "dark";
@@ -440,35 +504,124 @@ export function SiteBanner() {
     setAuthUser(null);
   };
 
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+    setIsMobileNavOpen(false);
+  };
+
+  const navPills = (
+    <div className="topbar-scroll overflow-x-auto pb-1">
+      <div className="flex min-w-max items-center gap-1.5 sm:gap-2">
+        {MAIN_NAV_LINKS.map((item) => (
+          <Link key={item.label} href={item.href} className="nav-pill" onClick={closeMenu}>
+            {item.label}
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+
+  const introOverlay = showIntro ? (
+    <div className="intro-overlay" aria-hidden="true">
+      <div className="intro-card">
+        <div className="brand-logo-shell">
+          <Image
+            src="/cartevisite-logo.png"
+            alt="Logo CarteVisite"
+            width={110}
+            height={110}
+            className="brand-logo-img h-[88px] w-[88px] rounded-xl p-2"
+          />
+        </div>
+        <p className="headline-script mt-4 text-4xl text-white">CarteVisite</p>
+      </div>
+    </div>
+  ) : null;
+
+  if (isScrolled && !isMenuOpen) {
+    return (
+      <>
+        {introOverlay}
+        <header className="site-header sticky top-0 z-50 pointer-events-none">
+          <div className="page-frame py-2 transition-all duration-300 ease-out">
+            <button
+              type="button"
+              onClick={() => {
+                setIsMenuOpen(true);
+              }}
+              className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#2a3a68] bg-[#05070d]/90 text-slate-100 opacity-95 shadow-[0_12px_30px_rgba(2,6,23,0.34)] backdrop-blur-xl transition-all duration-300 ease-out hover:border-yellow-500 hover:text-yellow-300"
+              aria-label="Ouvrir le menu"
+              title="Ouvrir le menu"
+            >
+              <span className="flex h-5 w-5 flex-col justify-center gap-1">
+                <span className="h-0.5 rounded-full bg-current" />
+                <span className="h-0.5 rounded-full bg-current" />
+                <span className="h-0.5 rounded-full bg-current" />
+              </span>
+            </button>
+          </div>
+        </header>
+      </>
+    );
+  }
+
+  if (isScrolled && isMenuOpen) {
+    return (
+      <>
+        {introOverlay}
+        <header className="site-header sticky top-0 z-50 border-b border-white/8 bg-[#05070d]/88 shadow-[0_8px_28px_rgba(2,6,23,0.28)] backdrop-blur-xl transition-all duration-300 ease-out">
+          <nav className="page-frame flex items-center gap-2 py-2 transition-all duration-300 ease-out">
+            <button
+              type="button"
+              onClick={() => {
+                setIsMenuOpen(false);
+              }}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-yellow-500/70 bg-[#0b1222] text-yellow-300 transition hover:bg-yellow-500 hover:text-[#05070d]"
+              aria-label="Fermer le menu"
+              title="Fermer le menu"
+            >
+              <span aria-hidden="true" className="text-lg leading-none">x</span>
+            </button>
+            <div className="min-w-0 flex-1">{navPills}</div>
+          </nav>
+        </header>
+      </>
+    );
+  }
+
   return (
-    <header className="sticky top-0 z-50 border-b border-[#16203a] bg-[#05070d]/95 backdrop-blur">
-      <nav className="mx-auto w-full max-w-[92rem] px-[var(--page-gutter)] py-3 sm:py-4 md:py-5">
-        <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
-          <Link href="/" className="flex items-center gap-3 sm:gap-4">
-            <Image
-              src="/cartevisite-logo.png"
-              alt="Logo CarteVisite"
-              width={72}
-              height={72}
-              className="h-12 w-12 rounded-xl border border-[#2a3a68] bg-[#0b1222] p-1 sm:h-16 sm:w-16"
-            />
-            <div>
-              <span className="headline-script block text-[1.6rem] leading-none text-white sm:text-[2rem]">
+    <>
+      {introOverlay}
+      <header className="site-header sticky top-0 z-50 border-b border-white/8 bg-[#05070d]/82 shadow-[0_8px_28px_rgba(2,6,23,0.24)] backdrop-blur-xl">
+        <nav className="page-frame py-3 sm:py-3.5">
+        <div className="flex flex-wrap items-center justify-between gap-3.5 sm:flex-nowrap sm:gap-4">
+          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
+            <div className="brand-logo-shell">
+              <Image
+                src="/cartevisite-logo.png"
+                alt="Logo CarteVisite"
+                width={72}
+                height={72}
+                className="brand-logo-img h-9 w-9 rounded-lg p-1 sm:h-11 sm:w-11"
+              />
+            </div>
+            <div className="min-w-0">
+              <span className="headline-script block truncate text-[1.2rem] leading-none text-white sm:text-[1.55rem]">
                 CarteVisite
               </span>
-              <span className="mt-1 hidden text-[11px] uppercase tracking-[0.15em] text-slate-400 sm:mt-2 sm:block sm:text-xs">
+              <span className="site-subtitle mt-0.5 hidden text-[10px] uppercase tracking-[0.14em] text-slate-400 lg:block">
                 Publications et visibilite d entreprises
               </span>
             </div>
           </Link>
 
-          <div className="flex w-full flex-wrap items-center justify-start gap-2 sm:w-auto sm:justify-end sm:gap-3">
+          <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
             <button
               type="button"
               onClick={handleLanguageToggle}
               data-i18n-skip
               title="Changer la langue"
-              className="inline-flex items-center gap-2 rounded-full border border-[#2a3a68] bg-[#0b1222] px-3 py-1.5 text-xs font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 active:scale-[0.98]"
+              className="inline-flex items-center gap-1.5 rounded-full border border-[#2a3a68] bg-[#0b1222]/90 px-2.5 py-1.5 text-[11px] font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 active:scale-[0.98] sm:px-3"
             >
               <span
                 className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#121d38] transition-transform duration-300 ${
@@ -489,7 +642,7 @@ export function SiteBanner() {
                   <path d="M12 3a14 14 0 0 0 0 18" />
                 </svg>
               </span>
-              <span className="min-w-[1.9rem] text-center text-[11px] font-black tracking-[0.12em] sm:text-xs">
+              <span className="min-w-[1.7rem] text-center text-[10px] font-black tracking-[0.12em] sm:text-[11px]">
                 {LANGUAGE_SHORT_LABELS[activeLanguage]}
               </span>
             </button>
@@ -500,7 +653,7 @@ export function SiteBanner() {
               data-i18n-skip
               title="Basculer le theme clair/sombre"
               aria-label="Basculer le theme clair/sombre"
-              className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#2a3a68] bg-[#0b1222] text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 active:scale-[0.96]"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#2a3a68] bg-[#0b1222]/90 text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 active:scale-[0.96] sm:h-9 sm:w-9"
             >
               <span
                 className={`relative inline-flex h-5 w-5 items-center justify-center transition-transform duration-300 ${
@@ -543,48 +696,15 @@ export function SiteBanner() {
               </span>
             </button>
 
-            <Link
-              href="/create-site"
-              className="rounded-full border border-yellow-500 bg-yellow-500 px-4 py-2 text-xs font-semibold text-[#05070d] transition hover:bg-yellow-400 sm:px-5 sm:py-2.5 sm:text-sm"
-            >
-              Creer mon site
-            </Link>
-            <a
-              href="https://youtube.com"
-              target="_blank"
-              rel="noreferrer"
-              className="rounded-full border border-yellow-500 bg-yellow-500 px-4 py-2 text-xs font-semibold text-[#05070d] transition hover:bg-yellow-400 sm:px-5 sm:py-2.5 sm:text-sm"
-            >
-              Formation
-            </a>
-
-            {authUser?.role === "entreprise" ? (
-              <Link
-                href="/espace-entreprise"
-                className="rounded-full border border-[#2a3a68] bg-[#0b1222] px-4 py-2 text-xs font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 sm:px-5 sm:py-2.5 sm:text-sm"
-              >
-                Espace entreprise
-              </Link>
-            ) : null}
-
-            {authUser?.role === "super_admin" ? (
-              <Link
-                href="/espace-admin"
-                className="rounded-full border border-[#2a3a68] bg-[#0b1222] px-4 py-2 text-xs font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 sm:px-5 sm:py-2.5 sm:text-sm"
-              >
-                Espace admin
-              </Link>
-            ) : null}
-
             {authUser ? (
               <button
                 type="button"
                 onClick={handleLogout}
                 title="Cliquez pour deconnecter"
-                className="flex items-center rounded-full border border-[#2a3a68] bg-[#0b1222] p-1 text-slate-100 transition hover:border-yellow-500"
+                className="flex items-center rounded-full border border-[#2a3a68] bg-[#0b1222]/90 p-1 text-slate-100 transition hover:border-yellow-500"
               >
                 <span
-                  className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-yellow-500/70 bg-[#121d38] text-xs font-black text-yellow-300 shadow-[0_0_0_2px_rgba(8,13,25,0.45)]"
+                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-yellow-500/70 bg-[#121d38] text-[11px] font-black text-yellow-300 shadow-[0_0_0_2px_rgba(8,13,25,0.45)] sm:h-8 sm:w-8"
                   aria-label={authUser.fullName || authUser.email || "Utilisateur"}
                 >
                   {avatarLetter}
@@ -593,7 +713,7 @@ export function SiteBanner() {
             ) : (
               <Link
                 href="/login"
-                className="rounded-full border border-[#2a3a68] bg-[#0b1222] px-4 py-2 text-xs font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 sm:px-5 sm:py-2.5 sm:text-sm"
+                className="rounded-full border border-[#2a3a68] bg-[#0b1222]/90 px-3 py-1.5 text-[11px] font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 sm:px-4 sm:py-2 sm:text-xs"
               >
                 {authLoading ? "Chargement..." : "Connexion"}
               </Link>
@@ -601,22 +721,63 @@ export function SiteBanner() {
           </div>
         </div>
 
-        <div className="mt-4 border-t border-[#16203a] pt-4">
-          <div className="overflow-x-auto pb-1">
-            <div className="flex min-w-max items-center gap-x-5 gap-y-3 text-sm font-medium text-slate-300 sm:gap-x-7 sm:text-[15px]">
-            {MAIN_NAV_LINKS.map((item) => (
-              <Link
-                key={item.label}
-                href={item.href}
-                className="transition hover:text-yellow-300"
-              >
-                {item.label}
+        <div className="mt-3 sm:mt-3.5 sm:flex sm:justify-end">
+          <div className="topbar-scroll overflow-x-auto pb-1.5 sm:overflow-visible sm:pb-0">
+            <div className="flex min-w-max items-center gap-2.5 sm:gap-3">
+              <Link href="/create-site" className="nav-pill nav-pill-primary justify-center">
+                Creer mon site
               </Link>
-            ))}
+              <a
+                href="https://youtube.com"
+                target="_blank"
+                rel="noreferrer"
+                className="nav-pill nav-pill-primary justify-center"
+              >
+                Formation
+              </a>
+
+              {authUser?.role === "entreprise" ? (
+                <Link href="/espace-entreprise" className="nav-pill justify-center">
+                  Espace entreprise
+                </Link>
+              ) : null}
+
+              {authUser?.role === "super_admin" ? (
+                <Link href="/espace-admin" className="nav-pill justify-center">
+                  Espace admin
+                </Link>
+              ) : null}
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMobileNavOpen((current) => !current);
+                }}
+                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#2a3a68] bg-[#0b1222]/90 text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 sm:hidden"
+                aria-label={isMobileNavOpen ? "Masquer la navigation" : "Afficher la navigation"}
+                title={isMobileNavOpen ? "Masquer la navigation" : "Afficher la navigation"}
+              >
+                <span className="flex h-4 w-4 flex-col justify-center gap-1">
+                  <span className="h-0.5 rounded-full bg-current" />
+                  <span className="h-0.5 rounded-full bg-current" />
+                  <span className="h-0.5 rounded-full bg-current" />
+                </span>
+              </button>
             </div>
           </div>
         </div>
-      </nav>
-    </header>
+
+        <div
+          className={`mt-3 overflow-hidden border-t border-white/8 transition-all duration-300 ease-out ${
+            isMobileNavOpen
+              ? "max-h-28 pt-3 opacity-100"
+              : "max-h-0 pt-0 opacity-0 sm:max-h-28 sm:pt-3 sm:opacity-100"
+          }`}
+        >
+          {navPills}
+        </div>
+        </nav>
+      </header>
+    </>
   );
 }

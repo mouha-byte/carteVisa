@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 
 import { SiteBanner } from "@/app/ui/site-banner";
 
@@ -44,9 +44,8 @@ type FaqItem = {
 };
 
 type CaptchaChallenge = {
-  left: number;
-  right: number;
-  answer: number;
+  code: string;
+  noiseSeed: number;
 };
 
 type ServiceFormState = {
@@ -171,21 +170,77 @@ const INITIAL_FORM: ServiceFormState = {
   message: "",
 };
 
-const INITIAL_CAPTCHA: CaptchaChallenge = {
-  left: 2,
-  right: 3,
-  answer: 5,
-};
-
 function createCaptchaChallenge(): CaptchaChallenge {
-  const left = Math.floor(Math.random() * 8) + 2;
-  const right = Math.floor(Math.random() * 8) + 2;
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+  let code = "";
+
+  for (let index = 0; index < 5; index += 1) {
+    code += alphabet[Math.floor(Math.random() * alphabet.length)];
+  }
 
   return {
-    left,
-    right,
-    answer: left + right,
+    code,
+    noiseSeed: Math.floor(Math.random() * 10_000),
   };
+}
+
+function drawCaptcha(canvas: HTMLCanvasElement, challenge: CaptchaChallenge): void {
+  const context = canvas.getContext("2d");
+  if (!context) {
+    return;
+  }
+
+  const width = canvas.width;
+  const height = canvas.height;
+
+  context.clearRect(0, 0, width, height);
+  context.fillStyle = "#eef4ff";
+  context.fillRect(0, 0, width, height);
+
+  for (let index = 0; index < 18; index += 1) {
+    const x = (challenge.noiseSeed * (index + 3) * 13) % width;
+    const y = (challenge.noiseSeed * (index + 5) * 17) % height;
+    context.fillStyle = index % 2 === 0 ? "rgba(37, 99, 235, 0.14)" : "rgba(250, 204, 21, 0.18)";
+    context.beginPath();
+    context.arc(x, y, (index % 4) + 1.4, 0, Math.PI * 2);
+    context.fill();
+  }
+
+  for (let index = 0; index < 4; index += 1) {
+    context.strokeStyle = index % 2 === 0 ? "rgba(30, 64, 175, 0.38)" : "rgba(202, 138, 4, 0.28)";
+    context.lineWidth = 1.4;
+    context.beginPath();
+    context.moveTo(0, (height / 4) * index + ((challenge.noiseSeed + index * 11) % 12));
+    context.bezierCurveTo(
+      width * 0.25,
+      ((challenge.noiseSeed + index * 7) % height),
+      width * 0.75,
+      ((challenge.noiseSeed + index * 19) % height),
+      width,
+      (height / 4) * index + ((challenge.noiseSeed + index * 13) % 12)
+    );
+    context.stroke();
+  }
+
+  context.textBaseline = "middle";
+  context.textAlign = "center";
+  context.font = "700 26px Arial";
+
+  const characters = challenge.code.split("");
+  const step = width / (characters.length + 1);
+
+  characters.forEach((character, index) => {
+    const x = step * (index + 1);
+    const y = height / 2 + ((challenge.noiseSeed + index * 23) % 10) - 5;
+    const rotation = (((challenge.noiseSeed + index * 29) % 22) - 11) * (Math.PI / 180);
+
+    context.save();
+    context.translate(x, y);
+    context.rotate(rotation);
+    context.fillStyle = index % 2 === 0 ? "#0f172a" : "#1d4ed8";
+    context.fillText(character, 0, 0);
+    context.restore();
+  });
 }
 
 function isApiSuccess<T>(value: unknown): value is ApiSuccess<T> {
@@ -224,8 +279,9 @@ export default function ServicesPage() {
   const [isSending, setIsSending] = useState(false);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [feedbackType, setFeedbackType] = useState<"ok" | "error" | null>(null);
-  const [captcha, setCaptcha] = useState<CaptchaChallenge>(INITIAL_CAPTCHA);
+  const [captcha, setCaptcha] = useState<CaptchaChallenge>(() => createCaptchaChallenge());
   const [captchaInput, setCaptchaInput] = useState("");
+  const captchaCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   const refreshCaptcha = () => {
     setCaptcha(createCaptchaChallenge());
@@ -233,8 +289,10 @@ export default function ServicesPage() {
   };
 
   useEffect(() => {
-    refreshCaptcha();
-  }, []);
+    if (captchaCanvasRef.current) {
+      drawCaptcha(captchaCanvasRef.current, captcha);
+    }
+  }, [captcha]);
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -242,10 +300,9 @@ export default function ServicesPage() {
     setFeedback(null);
     setFeedbackType(null);
 
-    const parsedCaptcha = Number.parseInt(captchaInput.trim(), 10);
-    if (!Number.isFinite(parsedCaptcha) || parsedCaptcha !== captcha.answer) {
+    if (captchaInput.trim().toUpperCase() !== captcha.code) {
       setFeedbackType("error");
-      setFeedback("Verification anti-spam invalide. Merci de recalculer la somme.");
+      setFeedback("Verification anti-spam invalide. Merci de saisir le code affiche.");
       refreshCaptcha();
       return;
     }
@@ -303,11 +360,11 @@ export default function ServicesPage() {
   };
 
   return (
-    <div className="service-page min-h-screen">
+    <div className="service-page app-shell">
       <SiteBanner />
 
-      <main className="mx-auto w-full max-w-[92rem] px-[var(--page-gutter)] py-8 md:py-12">
-        <section className="service-panel rounded-3xl border p-6 md:p-10">
+      <main className="page-frame page-stack">
+        <section className="service-panel rounded-[2rem] border p-6 md:p-10">
           <p className="service-kicker text-xs font-semibold uppercase tracking-[0.14em]">
             Service
           </p>
@@ -321,7 +378,7 @@ export default function ServicesPage() {
           </p>
         </section>
 
-        <section className="service-panel mt-6 rounded-3xl border p-5 md:p-6">
+        <section className="service-panel rounded-[1.75rem] border p-5 md:p-6">
           <div className="mb-4 flex items-center justify-between gap-2">
             <h2 className="service-heading text-2xl font-black">Nos prestations</h2>
             <span className="service-count-badge rounded-full border px-3 py-1 text-xs font-semibold">
@@ -368,7 +425,7 @@ export default function ServicesPage() {
           </div>
         </section>
 
-        <section className="mt-6 grid gap-6 lg:grid-cols-[1fr_1.1fr]">
+        <section className="grid gap-4 lg:grid-cols-[0.95fr_1.05fr] lg:gap-6">
           <div className="space-y-6">
             <article className="service-panel rounded-3xl border p-5 md:p-6">
               <h2 className="service-heading text-xl font-black">Comment ca marche</h2>
@@ -524,16 +581,23 @@ export default function ServicesPage() {
 
                 <label className="service-muted block text-sm">
                   <span className="service-subheading mb-2 block font-semibold">
-                    Calculez: {captcha.left} + {captcha.right}
+                    Saisissez les caracteres affiches
                   </span>
+                  <canvas
+                    ref={captchaCanvasRef}
+                    width={220}
+                    height={64}
+                    className="mb-3 h-16 w-full max-w-[220px] rounded-xl border border-[#2a3a68] bg-white"
+                  />
                   <input
                     required
-                    inputMode="numeric"
                     value={captchaInput}
                     onChange={(event) => {
-                      setCaptchaInput(event.target.value.replace(/[^0-9]/g, ""));
+                      setCaptchaInput(event.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase());
                     }}
-                    placeholder="Votre reponse"
+                    placeholder="Entrez le code"
+                    maxLength={5}
+                    autoCapitalize="characters"
                     className="service-input w-full rounded-xl border px-4 py-3 text-sm outline-none transition"
                   />
                 </label>
