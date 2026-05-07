@@ -274,14 +274,14 @@ export function SiteBanner() {
   const [activeTheme, setActiveTheme] = useState<SiteTheme>("dark");
   const [isLanguageAnimating, setIsLanguageAnimating] = useState(false);
   const [isThemeAnimating, setIsThemeAnimating] = useState(false);
-  const [isScrolled, setIsScrolled] = useState(false);
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileNavOpen, setIsMobileNavOpen] = useState(false);
+  const [isHeaderHidden, setIsHeaderHidden] = useState(false);
   const [showIntro, setShowIntro] = useState(false);
   const pathname = usePathname();
 
   const languageAnimTimeoutRef = useRef<number | null>(null);
   const themeAnimTimeoutRef = useRef<number | null>(null);
+  const lastScrollYRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -422,25 +422,19 @@ export function SiteBanner() {
   useEffect(() => {
     const onScroll = () => {
       const currentY = window.scrollY;
-      setIsScrolled((current) => {
-        // Use hysteresis to avoid rapid toggling/flicker around the threshold.
-        if (!current && currentY > 96) {
-          return true;
-        }
+      const lastY = lastScrollYRef.current;
 
-        if (current && currentY < 56) {
-          return false;
-        }
-
-        return current;
-      });
-
-      if (currentY < 56) {
-        setIsMenuOpen(false);
+      if (currentY > 120 && currentY > lastY + 8) {
+        setIsHeaderHidden(true);
+        setIsMobileNavOpen(false);
+      } else if (currentY < lastY - 8 || currentY < 40) {
+        setIsHeaderHidden(false);
       }
+
+      lastScrollYRef.current = currentY;
     };
 
-    onScroll();
+    lastScrollYRef.current = window.scrollY;
     window.addEventListener("scroll", onScroll, { passive: true });
 
     return () => {
@@ -505,13 +499,12 @@ export function SiteBanner() {
   };
 
   const closeMenu = () => {
-    setIsMenuOpen(false);
     setIsMobileNavOpen(false);
   };
 
   const navPills = (
     <div className="topbar-scroll overflow-x-auto pb-1">
-      <div className="flex min-w-max items-center gap-1.5 sm:gap-2">
+      <div className="flex min-w-max items-center gap-1.5 sm:gap-2 lg:justify-end">
         {MAIN_NAV_LINKS.map((item) => (
           <Link key={item.label} href={item.href} className="nav-pill" onClick={closeMenu}>
             {item.label}
@@ -538,244 +531,221 @@ export function SiteBanner() {
     </div>
   ) : null;
 
-  if (isScrolled && !isMenuOpen) {
-    return (
-      <>
-        {introOverlay}
-        <header className="site-header sticky top-0 z-50 pointer-events-none">
-          <div className="page-frame py-2 transition-all duration-300 ease-out">
-            <button
-              type="button"
-              onClick={() => {
-                setIsMenuOpen(true);
-              }}
-              className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-[#2a3a68] bg-[#05070d]/90 text-slate-100 opacity-95 shadow-[0_12px_30px_rgba(2,6,23,0.34)] backdrop-blur-xl transition-all duration-300 ease-out hover:border-yellow-500 hover:text-yellow-300"
-              aria-label="Ouvrir le menu"
-              title="Ouvrir le menu"
-            >
-              <span className="flex h-5 w-5 flex-col justify-center gap-1">
-                <span className="h-0.5 rounded-full bg-current" />
-                <span className="h-0.5 rounded-full bg-current" />
-                <span className="h-0.5 rounded-full bg-current" />
-              </span>
-            </button>
-          </div>
-        </header>
-      </>
-    );
-  }
+  const brandBlock = (
+    <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
+      <div className="brand-logo-shell">
+        <Image
+          src="/cartevisite-logo.png"
+          alt="Logo CarteVisite"
+          width={72}
+          height={72}
+          className="brand-logo-img h-9 w-9 rounded-lg p-1 sm:h-11 sm:w-11"
+        />
+      </div>
+      <div className="min-w-0">
+        <span className="headline-script block truncate text-[1.15rem] leading-none text-white sm:text-[1.55rem]">
+          CarteVisite
+        </span>
+        <span className="site-subtitle mt-0.5 hidden text-[10px] uppercase tracking-[0.14em] text-slate-400 lg:block">
+          Publications et visibilite d entreprises
+        </span>
+      </div>
+    </Link>
+  );
 
-  if (isScrolled && isMenuOpen) {
-    return (
-      <>
-        {introOverlay}
-        <header className="site-header sticky top-0 z-50 border-b border-white/8 bg-[#05070d]/88 shadow-[0_8px_28px_rgba(2,6,23,0.28)] backdrop-blur-xl transition-all duration-300 ease-out">
-          <nav className="page-frame flex items-center gap-2 py-2 transition-all duration-300 ease-out">
-            <button
-              type="button"
-              onClick={() => {
-                setIsMenuOpen(false);
-              }}
-              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-yellow-500/70 bg-[#0b1222] text-yellow-300 transition hover:bg-yellow-500 hover:text-[#05070d]"
-              aria-label="Fermer le menu"
-              title="Fermer le menu"
-            >
-              <span aria-hidden="true" className="text-lg leading-none">x</span>
-            </button>
-            <div className="min-w-0 flex-1">{navPills}</div>
-          </nav>
-        </header>
-      </>
-    );
-  }
+  const languageButton = (
+    <button
+      type="button"
+      onClick={handleLanguageToggle}
+      data-i18n-skip
+      title="Changer la langue"
+      className="inline-flex h-9 items-center gap-1.5 rounded-full border border-[#2a3a68] bg-[#0b1222]/90 px-2.5 text-[11px] font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 active:scale-[0.98] sm:h-10 sm:px-3"
+    >
+      <span
+        className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#121d38] transition-transform duration-300 ${
+          isLanguageAnimating ? "rotate-180 scale-110" : ""
+        }`}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className="h-3.5 w-3.5"
+        >
+          <circle cx="12" cy="12" r="9" />
+          <path d="M3 12h18" />
+          <path d="M12 3a14 14 0 0 1 0 18" />
+          <path d="M12 3a14 14 0 0 0 0 18" />
+        </svg>
+      </span>
+      <span className="min-w-[1.7rem] text-center text-[10px] font-black tracking-[0.12em] sm:text-[11px]">
+        {LANGUAGE_SHORT_LABELS[activeLanguage]}
+      </span>
+    </button>
+  );
+
+  const themeButton = (
+    <button
+      type="button"
+      onClick={handleToggleTheme}
+      data-i18n-skip
+      title="Basculer le theme clair/sombre"
+      aria-label="Basculer le theme clair/sombre"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#2a3a68] bg-[#0b1222]/90 text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 active:scale-[0.96] sm:h-10 sm:w-10"
+    >
+      <span
+        className={`relative inline-flex h-5 w-5 items-center justify-center transition-transform duration-300 ${
+          isThemeAnimating ? "rotate-[35deg] scale-110" : ""
+        }`}
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className={`absolute h-5 w-5 transition-all duration-300 ${
+            isDarkTheme ? "scale-0 opacity-0 rotate-90" : "scale-100 opacity-100 rotate-0"
+          }`}
+        >
+          <circle cx="12" cy="12" r="4" />
+          <path d="M12 2v2" />
+          <path d="M12 20v2" />
+          <path d="m4.93 4.93 1.41 1.41" />
+          <path d="m17.66 17.66 1.41 1.41" />
+          <path d="M2 12h2" />
+          <path d="M20 12h2" />
+          <path d="m6.34 17.66-1.41 1.41" />
+          <path d="m19.07 4.93-1.41 1.41" />
+        </svg>
+
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          className={`absolute h-5 w-5 transition-all duration-300 ${
+            isDarkTheme ? "scale-100 opacity-100 rotate-0" : "scale-0 opacity-0 -rotate-90"
+          }`}
+        >
+          <path d="M12 3a7 7 0 1 0 9 9 9 9 0 1 1-9-9Z" />
+        </svg>
+      </span>
+    </button>
+  );
+
+  const authControl = authUser ? (
+    <button
+      type="button"
+      onClick={handleLogout}
+      title="Cliquez pour deconnecter"
+      className="flex h-9 items-center rounded-full border border-[#2a3a68] bg-[#0b1222]/90 p-1 text-slate-100 transition hover:border-yellow-500 sm:h-10"
+    >
+      <span
+        className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-yellow-500/70 bg-[#121d38] text-[11px] font-black text-yellow-300 shadow-[0_0_0_2px_rgba(8,13,25,0.45)] sm:h-8 sm:w-8"
+        aria-label={authUser.fullName || authUser.email || "Utilisateur"}
+      >
+        {avatarLetter}
+      </span>
+    </button>
+  ) : (
+    <Link
+      href="/login"
+      className="inline-flex h-9 items-center rounded-full border border-[#2a3a68] bg-[#0b1222]/90 px-3 text-[11px] font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 sm:h-10 sm:px-4 sm:text-xs"
+    >
+      {authLoading ? "Chargement..." : "Connexion"}
+    </Link>
+  );
+
+  const createSiteLink = (
+    <Link
+      href="/create-site"
+      className="nav-pill nav-pill-primary inline-flex h-11 items-center justify-center gap-2 px-4 text-xs sm:px-5"
+    >
+      <span>Creer mon site</span>
+      <span className="text-lg leading-none">+</span>
+    </Link>
+  );
+
+  const trainingLink = (
+    <a
+      href="https://youtube.com"
+      target="_blank"
+      rel="noreferrer"
+      className="nav-pill nav-pill-primary inline-flex h-11 items-center justify-center px-4 text-xs sm:px-5"
+    >
+      Formation
+    </a>
+  );
 
   return (
     <>
       {introOverlay}
-      <header className="site-header sticky top-0 z-50 border-b border-white/8 bg-[#05070d]/82 shadow-[0_8px_28px_rgba(2,6,23,0.24)] backdrop-blur-xl">
-        <nav className="page-frame py-3 sm:py-3.5">
-        <div className="flex flex-wrap items-center justify-between gap-3.5 sm:flex-nowrap sm:gap-4">
-          <Link href="/" className="flex min-w-0 items-center gap-2 sm:gap-3">
-            <div className="brand-logo-shell">
-              <Image
-                src="/cartevisite-logo.png"
-                alt="Logo CarteVisite"
-                width={72}
-                height={72}
-                className="brand-logo-img h-9 w-9 rounded-lg p-1 sm:h-11 sm:w-11"
-              />
+      <header
+        className={`site-header sticky top-0 z-50 border-b border-white/8 bg-[#05070d]/88 shadow-[0_8px_28px_rgba(2,6,23,0.24)] backdrop-blur-xl transition-transform duration-300 ease-out ${
+          isHeaderHidden ? "-translate-y-full" : "translate-y-0"
+        }`}
+      >
+        <nav className="page-frame py-2.5 sm:py-3.5">
+          <div className="hidden gap-3 lg:grid lg:grid-cols-[1fr_auto] lg:items-center">
+            <div className="flex items-center gap-3">
+              {authControl}
+              {createSiteLink}
+              {trainingLink}
+              <span className="h-6 w-px bg-[#233154]" />
+              {languageButton}
+              {themeButton}
             </div>
-            <div className="min-w-0">
-              <span className="headline-script block truncate text-[1.2rem] leading-none text-white sm:text-[1.55rem]">
-                CarteVisite
-              </span>
-              <span className="site-subtitle mt-0.5 hidden text-[10px] uppercase tracking-[0.14em] text-slate-400 lg:block">
-                Publications et visibilite d entreprises
-              </span>
-            </div>
-          </Link>
+            <div className="justify-self-end">{brandBlock}</div>
+          </div>
 
-          <div className="flex shrink-0 items-center gap-2.5 sm:gap-3">
-            <button
-              type="button"
-              onClick={handleLanguageToggle}
-              data-i18n-skip
-              title="Changer la langue"
-              className="inline-flex items-center gap-1.5 rounded-full border border-[#2a3a68] bg-[#0b1222]/90 px-2.5 py-1.5 text-[11px] font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 active:scale-[0.98] sm:px-3"
-            >
-              <span
-                className={`inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#121d38] transition-transform duration-300 ${
-                  isLanguageAnimating ? "rotate-180 scale-110" : ""
-                }`}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className="h-3.5 w-3.5"
-                >
-                  <circle cx="12" cy="12" r="9" />
-                  <path d="M3 12h18" />
-                  <path d="M12 3a14 14 0 0 1 0 18" />
-                  <path d="M12 3a14 14 0 0 0 0 18" />
-                </svg>
-              </span>
-              <span className="min-w-[1.7rem] text-center text-[10px] font-black tracking-[0.12em] sm:text-[11px]">
-                {LANGUAGE_SHORT_LABELS[activeLanguage]}
-              </span>
-            </button>
+          <div className="mt-4 hidden rounded-lg border border-[#233154] bg-[#0b1222]/72 px-3 py-2 lg:block">
+            <div className="flex justify-end">{navPills}</div>
+          </div>
+
+          <div className="grid gap-3 lg:hidden">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex min-w-0 items-center gap-2">
+                {themeButton}
+                {languageButton}
+              </div>
+
+              <div className="min-w-0 scale-90">{brandBlock}</div>
 
             <button
               type="button"
-              onClick={handleToggleTheme}
-              data-i18n-skip
-              title="Basculer le theme clair/sombre"
-              aria-label="Basculer le theme clair/sombre"
-              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[#2a3a68] bg-[#0b1222]/90 text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 active:scale-[0.96] sm:h-9 sm:w-9"
+              onClick={() => {
+                setIsMobileNavOpen((current) => !current);
+              }}
+              className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border border-[#2a3a68] bg-[#0b1222]/90 text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300"
+              aria-label={isMobileNavOpen ? "Masquer la navigation" : "Afficher la navigation"}
+              title={isMobileNavOpen ? "Masquer la navigation" : "Afficher la navigation"}
             >
-              <span
-                className={`relative inline-flex h-5 w-5 items-center justify-center transition-transform duration-300 ${
-                  isThemeAnimating ? "rotate-[35deg] scale-110" : ""
-                }`}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className={`absolute h-5 w-5 transition-all duration-300 ${
-                    isDarkTheme ? "scale-0 opacity-0 rotate-90" : "scale-100 opacity-100 rotate-0"
-                  }`}
-                >
-                  <circle cx="12" cy="12" r="4" />
-                  <path d="M12 2v2" />
-                  <path d="M12 20v2" />
-                  <path d="m4.93 4.93 1.41 1.41" />
-                  <path d="m17.66 17.66 1.41 1.41" />
-                  <path d="M2 12h2" />
-                  <path d="M20 12h2" />
-                  <path d="m6.34 17.66-1.41 1.41" />
-                  <path d="m19.07 4.93-1.41 1.41" />
-                </svg>
-
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  className={`absolute h-5 w-5 transition-all duration-300 ${
-                    isDarkTheme ? "scale-100 opacity-100 rotate-0" : "scale-0 opacity-0 -rotate-90"
-                  }`}
-                >
-                  <path d="M12 3a7 7 0 1 0 9 9 9 9 0 1 1-9-9Z" />
-                </svg>
+              <span className="flex h-4 w-4 flex-col justify-center gap-1">
+                <span className="h-0.5 rounded-full bg-current" />
+                <span className="h-0.5 rounded-full bg-current" />
+                <span className="h-0.5 rounded-full bg-current" />
               </span>
             </button>
+            </div>
 
-            {authUser ? (
-              <button
-                type="button"
-                onClick={handleLogout}
-                title="Cliquez pour deconnecter"
-                className="flex items-center rounded-full border border-[#2a3a68] bg-[#0b1222]/90 p-1 text-slate-100 transition hover:border-yellow-500"
-              >
-                <span
-                  className="inline-flex h-7 w-7 items-center justify-center rounded-full border border-yellow-500/70 bg-[#121d38] text-[11px] font-black text-yellow-300 shadow-[0_0_0_2px_rgba(8,13,25,0.45)] sm:h-8 sm:w-8"
-                  aria-label={authUser.fullName || authUser.email || "Utilisateur"}
-                >
-                  {avatarLetter}
-                </span>
-              </button>
-            ) : (
-              <Link
-                href="/login"
-                className="rounded-full border border-[#2a3a68] bg-[#0b1222]/90 px-3 py-1.5 text-[11px] font-semibold text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 sm:px-4 sm:py-2 sm:text-xs"
-              >
-                {authLoading ? "Chargement..." : "Connexion"}
-              </Link>
-            )}
-          </div>
-        </div>
+            <div className="flex items-center justify-center gap-3">
+              {authControl}
+              {createSiteLink}
+              {trainingLink}
+            </div>
 
-        <div className="mt-3 sm:mt-3.5 sm:flex sm:justify-end">
-          <div className="topbar-scroll overflow-x-auto pb-1.5 sm:overflow-visible sm:pb-0">
-            <div className="flex min-w-max items-center gap-2.5 sm:gap-3">
-              <Link href="/create-site" className="nav-pill nav-pill-primary justify-center">
-                Creer mon site
-              </Link>
-              <a
-                href="https://youtube.com"
-                target="_blank"
-                rel="noreferrer"
-                className="nav-pill nav-pill-primary justify-center"
-              >
-                Formation
-              </a>
-
-              {authUser?.role === "entreprise" ? (
-                <Link href="/espace-entreprise" className="nav-pill justify-center">
-                  Espace entreprise
-                </Link>
-              ) : null}
-
-              {authUser?.role === "super_admin" ? (
-                <Link href="/espace-admin" className="nav-pill justify-center">
-                  Espace admin
-                </Link>
-              ) : null}
-
-              <button
-                type="button"
-                onClick={() => {
-                  setIsMobileNavOpen((current) => !current);
-                }}
-                className="inline-flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#2a3a68] bg-[#0b1222]/90 text-slate-100 transition hover:border-yellow-500 hover:text-yellow-300 sm:hidden"
-                aria-label={isMobileNavOpen ? "Masquer la navigation" : "Afficher la navigation"}
-                title={isMobileNavOpen ? "Masquer la navigation" : "Afficher la navigation"}
-              >
-                <span className="flex h-4 w-4 flex-col justify-center gap-1">
-                  <span className="h-0.5 rounded-full bg-current" />
-                  <span className="h-0.5 rounded-full bg-current" />
-                  <span className="h-0.5 rounded-full bg-current" />
-                </span>
-              </button>
+            <div
+              className={`overflow-hidden rounded-lg border border-[#233154] bg-[#0b1222]/72 transition-all duration-300 ease-out ${
+                isMobileNavOpen ? "max-h-32 p-2 opacity-100" : "max-h-0 p-0 opacity-0"
+              }`}
+            >
+              {navPills}
             </div>
           </div>
-        </div>
-
-        <div
-          className={`mt-3 overflow-hidden border-t border-white/8 transition-all duration-300 ease-out ${
-            isMobileNavOpen
-              ? "max-h-28 pt-3 opacity-100"
-              : "max-h-0 pt-0 opacity-0 sm:max-h-28 sm:pt-3 sm:opacity-100"
-          }`}
-        >
-          {navPills}
-        </div>
         </nav>
       </header>
     </>

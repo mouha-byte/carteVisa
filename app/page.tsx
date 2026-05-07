@@ -293,9 +293,9 @@ function CompanyCoverCard({ company }: { company: CompanyCard }) {
   return (
     <Link
       href={`/entreprises/${company.slug}`}
-      className="group block overflow-hidden rounded-[2rem] border border-[#24325a] bg-[#101a31] shadow-[0_14px_34px_rgba(3,8,25,0.35)] transition hover:-translate-y-1 hover:border-yellow-500"
+      className="group block overflow-hidden rounded-xl border border-[#24325a] bg-[#101a31] shadow-[0_14px_34px_rgba(3,8,25,0.35)] transition hover:-translate-y-1 hover:border-yellow-500"
     >
-      <div className="relative h-72 w-full bg-[#162445] md:h-80">
+      <div className="relative h-36 w-full bg-[#162445] sm:h-56 md:h-80">
         <Image src={coverSrc} alt={company.name} fill className="object-cover transition duration-300 group-hover:scale-105" />
         <div className="absolute inset-0 bg-gradient-to-t from-[#05070d]/85 via-[#05070d]/15 to-transparent" />
 
@@ -314,9 +314,9 @@ function CompanyCoverCard({ company }: { company: CompanyCard }) {
           </div>
         </div>
 
-        <div className="company-cover-caption absolute inset-x-4 bottom-4 rounded-2xl border border-white/20 bg-[#05070d]/70 px-4 py-3 backdrop-blur">
-          <p className="truncate text-base font-black text-white">{company.name}</p>
-          <p className="mt-1 max-h-0 overflow-hidden text-xs text-slate-200 opacity-0 transition-all duration-300 group-hover:max-h-8 group-hover:opacity-100 group-focus-visible:max-h-8 group-focus-visible:opacity-100">
+        <div className="company-cover-caption absolute inset-x-2 bottom-2 rounded-xl border border-white/20 bg-[#05070d]/70 px-3 py-2 backdrop-blur sm:inset-x-4 sm:bottom-4 sm:px-4 sm:py-3">
+          <p className="truncate text-xs font-black text-white sm:text-base">{company.name}</p>
+          <p className="mt-1 max-h-0 overflow-hidden text-[10px] text-slate-200 opacity-0 transition-all duration-300 group-hover:max-h-8 group-hover:opacity-100 group-focus-visible:max-h-8 group-focus-visible:opacity-100 sm:text-xs">
             {typeLabel + " • " + (company.city || company.sector || "Ville non specifiee") + " • " + company.open_jobs_count + " poste(s)"}
           </p>
         </div>
@@ -389,8 +389,7 @@ export default function HomePage() {
   const [searchResults, setSearchResults] = useState<SearchResultItem[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
-  const [showBackToTop, setShowBackToTop] = useState(false);
-  const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const [isFilterPopupOpen, setIsFilterPopupOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -409,6 +408,7 @@ export default function HomePage() {
     setSearchCity("all");
     setSearchResults([]);
     setSearchError(null);
+    setIsFilterPopupOpen(false);
   }, []);
 
   const visibleJobs = useMemo(() => {
@@ -483,7 +483,7 @@ export default function HomePage() {
       const rawSections = await Promise.all(
         categoriesResult.data.map(async (category) => {
           const byCategory = await requestApi<CompanyCard[]>(
-            `/api/companies?page=1&limit=4&sort=newest&category=${encodeURIComponent(category.slug)}`
+            `/api/companies?page=1&limit=3&sort=newest&category=${encodeURIComponent(category.slug)}`
           );
 
           return {
@@ -517,39 +517,12 @@ export default function HomePage() {
   }, [loadLandingData]);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia("(max-width: 640px)");
-
-    const syncViewport = () => {
-      setIsMobileViewport(mediaQuery.matches);
-    };
-
-    syncViewport();
-    mediaQuery.addEventListener("change", syncViewport);
-
-    return () => {
-      mediaQuery.removeEventListener("change", syncViewport);
-    };
-  }, []);
-
-  useEffect(() => {
-    const onScroll = () => {
-      setShowBackToTop(window.scrollY > 360);
-    };
-
-    onScroll();
-    window.addEventListener("scroll", onScroll, { passive: true });
-
-    return () => {
-      window.removeEventListener("scroll", onScroll);
-    };
-  }, []);
-
-  useEffect(() => {
     let active = true;
 
     const timer = window.setTimeout(async () => {
       const keyword = searchKeyword.trim();
-      const hasFilters = searchCategory !== "all" || searchCity !== "all";
+      const hasFilters =
+        searchType !== "all" || searchCategory !== "all" || searchCity !== "all";
 
       if (keyword.length < 2 && !hasFilters) {
         if (!active) {
@@ -612,19 +585,21 @@ export default function HomePage() {
     <div className="app-shell">
       <SiteBanner />
 
-      <main id="top" className="page-frame page-stack gap-8 sm:gap-10 md:gap-12">
+      <main id="top" className="page-frame page-stack gap-12 sm:gap-16 md:gap-20">
         <section id="hero-media" className="hero-contrast reveal-soft space-y-6 sm:space-y-7">
-          <div className="overflow-hidden rounded-3xl border border-[#223058] bg-[#0b1326] shadow-[0_20px_50px_rgba(3,6,20,0.55)]">
-            <div className="relative min-h-[280px] w-full md:min-h-[420px]">
+          <div className="overflow-hidden rounded-xl border border-[#223058] bg-[#0b1326] shadow-[0_20px_50px_rgba(3,6,20,0.55)]">
+            <div className="relative min-h-[170px] w-full sm:min-h-[210px] md:min-h-[260px]">
               <video
                 className="h-full w-full object-cover"
                 autoPlay
                 loop
                 muted
                 playsInline
+                suppressHydrationWarning
                 poster="https://images.unsplash.com/photo-1552664730-d307ca884978?auto=format&fit=crop&w=1400&q=80"
               >
                 <source
+                  suppressHydrationWarning
                   src="https://samplelib.com/lib/preview/mp4/sample-10s.mp4"
                   type="video/mp4"
                 />
@@ -632,16 +607,16 @@ export default function HomePage() {
 
               <div className="absolute inset-0 bg-gradient-to-r from-[#05070d]/92 via-[#0b1326]/62 to-transparent" />
               <div className="absolute inset-0 bg-gradient-to-t from-[#05070d]/80 via-transparent to-transparent" />
-              <div className="absolute inset-0 flex items-end p-4 sm:p-7 md:p-12">
+              <div className="absolute inset-0 flex items-end p-4 sm:p-6 md:p-9">
                 <div className="max-w-4xl space-y-4">
                   <p className="headline-script inline-flex rounded-full border border-yellow-500/60 bg-[#05070d]/70 px-4 py-1.5 text-sm text-yellow-300">
                     Landing multimedia professionnelle
                   </p>
-                  <h1 className="headline-special headline-accent text-3xl font-black leading-tight sm:text-4xl md:text-7xl">
-                    Design simple, dynamique et visuel
+                  <h1 className="headline-special headline-accent text-3xl font-black leading-tight sm:text-4xl md:text-5xl">
+                    Tableau de bord pro pour entreprises visibles
                   </h1>
                   <p className="max-w-3xl text-sm text-slate-200 sm:text-base md:text-lg">
-                    Une interface claire pour presenter les entreprises et leurs contenus visuels, avec une experience fluide sur mobile et desktop.
+                    Une experience SaaS claire pour trouver une entreprise, comparer les offres disponibles et transformer chaque fiche en point de contact qualifie.
                   </p>
                   <div className="flex flex-wrap items-center gap-3 pt-1">
                     <Link
@@ -656,21 +631,24 @@ export default function HomePage() {
                     >
                       Publier mon entreprise
                     </Link>
-                    <span className="rounded-full border border-[#2a3a68] bg-[#05070d]/70 px-3 py-1 text-[11px] font-semibold text-slate-300">
-                      Experience fluide sur mobile et desktop
-                    </span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
 
-          <p className="hero-subline text-center text-sm font-semibold text-slate-200 sm:text-base md:text-lg">
-            Plateforme orientee business: decouvrez les entreprises recentes, les contenus visuels et les offres actives sur tous les formats d ecran.
-          </p>
+          {/* <p className="hero-subline text-center text-sm font-semibold text-slate-200 sm:text-base md:text-lg">
+            Plateforme orientee business: centralisez la decouverte, la recherche, les categories et les candidatures dans une interface plus dense, lisible et professionnelle.
+          </p> */}
         </section>
 
-        <section className="reveal-up reveal-delay-1 space-y-5 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-7 md:p-9">
+        <div className="section-bridge reveal-soft reveal-delay-1">
+          <p>
+            Parcourez les espaces de promotion, les formations et les services utiles pour renforcer la presence digitale de votre entreprise sans quitter le parcours principal.
+          </p>
+        </div>
+
+        <section className="reveal-up reveal-delay-1 space-y-5 rounded-xl border border-[#1f2a4d] bg-[#0b1222] p-4 sm:p-7 md:p-9">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="headline-special headline-accent text-xl font-black md:text-2xl">
               Medias secondaires
@@ -688,23 +666,23 @@ export default function HomePage() {
                   href={ad.link}
                   target={ad.link.startsWith("http") ? "_blank" : undefined}
                   rel={ad.link.startsWith("http") ? "noreferrer" : undefined}
-                  className="mx-2 w-[78vw] min-w-[260px] max-w-[360px] shrink-0 overflow-hidden rounded-2xl border border-[#2a3a68] bg-[#101a31] transition hover:border-yellow-500"
+                  className="mx-1.5 w-[44vw] min-w-[150px] max-w-[220px] shrink-0 overflow-hidden rounded-xl border border-[#2a3a68] bg-[#101a31] transition hover:border-yellow-500 sm:mx-2 sm:w-[78vw] sm:min-w-[260px] sm:max-w-[360px]"
                 >
                   <div
-                    className="h-32 w-full bg-cover bg-center sm:h-36"
+                    className="h-24 w-full bg-cover bg-center sm:h-36"
                     style={{
                       backgroundImage: `linear-gradient(180deg, rgba(5,7,13,0) 0%, rgba(5,7,13,0.78) 100%), url('${ad.imageUrl}')`,
                     }}
                   />
-                  <div className="p-4">
+                  <div className="p-3 sm:p-4">
                     <div className="mb-2 flex items-center justify-between">
                       <span className="rounded-full bg-[#23335e] px-2 py-1 text-[11px] font-bold uppercase tracking-[0.08em] text-slate-300">
                         {ad.tag}
                       </span>
                       <span className="text-xs text-yellow-300">Voir</span>
                     </div>
-                    <p className="text-sm font-bold text-white">{ad.title}</p>
-                    <p className="mt-1 text-xs text-slate-300">{ad.subtitle}</p>
+                    <p className="text-xs font-bold text-white sm:text-sm">{ad.title}</p>
+                    <p className="mt-1 line-clamp-2 text-[11px] text-slate-300 sm:text-xs">{ad.subtitle}</p>
                   </div>
                 </a>
               ))}
@@ -712,9 +690,15 @@ export default function HomePage() {
           </div>
         </section>
 
+        <div className="section-bridge reveal-soft reveal-delay-1">
+          <p>
+            Recherchez une entreprise, un service ou une offre depuis un seul espace. Combinez mot cle, categorie et ville pour obtenir rapidement des resultats exploitables.
+          </p>
+        </div>
+
         <section
           id="search"
-          className="reveal-soft reveal-delay-1 rounded-3xl border border-[#1f2a4d] bg-[#0a1120] p-8 md:p-11"
+          className="reveal-soft reveal-delay-1 rounded-xl border border-[#1f2a4d] bg-[#0a1120] p-4 sm:p-8 md:p-11"
         >
           <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
             <h2 className="headline-special headline-accent text-3xl font-black md:text-4xl">
@@ -725,22 +709,32 @@ export default function HomePage() {
             </span>
           </div>
 
-          <div className="grid gap-5 lg:grid-cols-12">
+          <div className="grid gap-4 md:grid-cols-12">
             <input
               value={searchKeyword}
               onChange={(event) => {
                 setSearchKeyword(event.target.value);
               }}
               placeholder="Mot cle: entreprise, service, offre, produit"
-              className="rounded-full border border-[#2a3a68] bg-[#0f1830] px-5 py-3.5 text-sm text-white outline-none transition focus:border-yellow-400 lg:col-span-5"
+              className="rounded-full border border-[#2a3a68] bg-[#0f1830] px-5 py-3.5 text-sm text-white outline-none transition focus:border-yellow-400 md:col-span-5"
             />
+
+            <button
+              type="button"
+              onClick={() => {
+                setIsFilterPopupOpen(true);
+              }}
+              className="rounded-full border border-yellow-500 bg-[#111a30] px-5 py-3.5 text-sm font-bold text-yellow-300 transition hover:bg-yellow-500 hover:text-[#05070d] md:hidden"
+            >
+              Filtres
+            </button>
 
             <select
               value={searchType}
               onChange={(event) => {
                 setSearchType(event.target.value as "all" | SearchResultType);
               }}
-              className="rounded-full border border-[#2a3a68] bg-[#0f1830] px-4 py-3.5 text-sm text-white outline-none transition focus:border-yellow-400 lg:col-span-2"
+              className="hidden rounded-full border border-[#2a3a68] bg-[#0f1830] px-4 py-3.5 text-sm text-white outline-none transition focus:border-yellow-400 md:col-span-2 md:block"
             >
               <option value="all">Tout</option>
               <option value="company">Entreprises</option>
@@ -753,7 +747,7 @@ export default function HomePage() {
               onChange={(event) => {
                 setSearchCategory(event.target.value);
               }}
-              className="rounded-full border border-[#2a3a68] bg-[#0f1830] px-4 py-3.5 text-sm text-white outline-none transition focus:border-yellow-400 lg:col-span-3"
+              className="hidden rounded-full border border-[#2a3a68] bg-[#0f1830] px-4 py-3.5 text-sm text-white outline-none transition focus:border-yellow-400 md:col-span-3 md:block"
             >
               <option value="all">Toutes categories</option>
               {categories.map((category) => (
@@ -768,7 +762,7 @@ export default function HomePage() {
               onChange={(event) => {
                 setSearchCity(event.target.value);
               }}
-              className="rounded-full border border-[#2a3a68] bg-[#0f1830] px-4 py-3.5 text-sm text-white outline-none transition focus:border-yellow-400 lg:col-span-2"
+              className="hidden rounded-full border border-[#2a3a68] bg-[#0f1830] px-4 py-3.5 text-sm text-white outline-none transition focus:border-yellow-400 md:col-span-2 md:block"
             >
               <option value="all">Toutes villes</option>
               {cityOptions.map((cityValue) => (
@@ -778,6 +772,90 @@ export default function HomePage() {
               ))}
             </select>
           </div>
+
+          {isFilterPopupOpen ? (
+            <div className="fixed inset-0 z-[70] flex items-end bg-[#02040a]/70 px-3 py-4 backdrop-blur-sm md:hidden">
+              <div className="w-full rounded-2xl border border-[#2a3a68] bg-[#0b1222] p-5 shadow-[0_22px_46px_rgba(0,0,0,0.45)]">
+                <div className="mb-4 flex items-center justify-between gap-3">
+                  <h3 className="text-lg font-black text-white">Parametres de filtre</h3>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFilterPopupOpen(false);
+                    }}
+                    className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[#2a3a68] text-sm font-black text-slate-200"
+                    aria-label="Fermer les filtres"
+                  >
+                    x
+                  </button>
+                </div>
+
+                <div className="grid gap-3">
+                  <select
+                    value={searchType}
+                    onChange={(event) => {
+                      setSearchType(event.target.value as "all" | SearchResultType);
+                    }}
+                    className="rounded-full border border-[#2a3a68] bg-[#0f1830] px-4 py-3.5 text-sm text-white outline-none transition focus:border-yellow-400"
+                  >
+                    <option value="all">Tout</option>
+                    <option value="company">Entreprises</option>
+                    <option value="service">Produits / Services</option>
+                    <option value="job">Offres d emploi</option>
+                  </select>
+
+                  <select
+                    value={searchCategory}
+                    onChange={(event) => {
+                      setSearchCategory(event.target.value);
+                    }}
+                    className="rounded-full border border-[#2a3a68] bg-[#0f1830] px-4 py-3.5 text-sm text-white outline-none transition focus:border-yellow-400"
+                  >
+                    <option value="all">Toutes categories</option>
+                    {categories.map((category) => (
+                      <option key={category.id} value={category.slug}>
+                        {category.name}
+                      </option>
+                    ))}
+                  </select>
+
+                  <select
+                    value={searchCity}
+                    onChange={(event) => {
+                      setSearchCity(event.target.value);
+                    }}
+                    className="rounded-full border border-[#2a3a68] bg-[#0f1830] px-4 py-3.5 text-sm text-white outline-none transition focus:border-yellow-400"
+                  >
+                    <option value="all">Toutes villes</option>
+                    {cityOptions.map((cityValue) => (
+                      <option key={cityValue} value={cityValue}>
+                        {cityValue}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="mt-5 flex gap-3">
+                  <button
+                    type="button"
+                    onClick={clearSearchFilters}
+                    className="flex-1 rounded-full border border-[#2a3a68] px-4 py-3 text-xs font-bold text-slate-200"
+                  >
+                    Supprimer
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsFilterPopupOpen(false);
+                    }}
+                    className="flex-1 rounded-full border border-yellow-500 bg-yellow-500 px-4 py-3 text-xs font-black text-[#05070d]"
+                  >
+                    Appliquer
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
 
           {hasActiveSearchFilters ? (
             <div className="mt-4 flex justify-end">
@@ -812,11 +890,11 @@ export default function HomePage() {
           ) : null}
 
           {!isSearching && searchResults.length > 0 ? (
-            <div className="mt-6 grid gap-5 lg:grid-cols-2 xl:grid-cols-3">
+            <div className="mt-6 grid grid-cols-2 gap-4 lg:grid-cols-2 xl:grid-cols-3">
               {searchResults.map((item) => (
                 <article
                   key={`${item.type}-${item.id}`}
-                  className="card-tilt-hover reveal-soft rounded-2xl border border-[#2a3a68] bg-[#121d38] p-6"
+                  className="card-tilt-hover reveal-soft rounded-xl border border-[#2a3a68] bg-[#121d38] p-4 sm:p-6"
                 >
                   <div className="mb-2 flex items-center justify-between gap-2">
                     <span className="rounded-full border border-yellow-500/70 px-2 py-1 text-[11px] font-semibold text-yellow-300">
@@ -827,15 +905,15 @@ export default function HomePage() {
                     ) : null}
                   </div>
 
-                  <h3 className="text-lg font-black text-white">{item.title}</h3>
-                  <p className="mt-1 text-base text-slate-300">{item.subtitle}</p>
+                  <h3 className="text-sm font-black text-white sm:text-lg">{item.title}</h3>
+                  <p className="mt-1 text-xs text-slate-300 sm:text-base">{item.subtitle}</p>
                   {item.description ? (
-                    <p className="mt-2 text-base text-slate-400">{item.description}</p>
+                    <p className="mt-2 line-clamp-3 text-xs text-slate-400 sm:text-base">{item.description}</p>
                   ) : null}
 
                   <Link
                     href={item.link}
-                    className="mt-4 inline-flex rounded-full border border-[#2a3a68] px-4 py-2 text-xs font-semibold text-slate-200 transition hover:bg-[#1a2a4d]"
+                    className="mt-4 inline-flex rounded-full border border-[#2a3a68] px-3 py-2 text-[11px] font-semibold text-slate-200 transition hover:bg-[#1a2a4d] sm:px-4 sm:text-xs"
                   >
                     Ouvrir
                   </Link>
@@ -850,8 +928,7 @@ export default function HomePage() {
           searchCategory === "all" &&
           searchCity === "all" ? (
             <div className="mt-4">
-              <p className="text-sm text-slate-300">Suggestions: entreprises recentes</p>
-              <div className="mt-4 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              <div className="grid grid-cols-2 gap-4 sm:gap-6 xl:grid-cols-3">
                 {recentCompanies.map((company) => (
                   <CompanyCoverCard key={company.id} company={company} />
                 ))}
@@ -869,7 +946,13 @@ export default function HomePage() {
           ) : null}
         </section>
 
-        <section id="jobs" className="reveal-soft reveal-delay-2 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-8 md:p-11">
+        <div className="section-bridge reveal-soft reveal-delay-2">
+          <p>
+            Explorez les offres disponibles et identifiez les opportunites les plus pertinentes selon le poste, la ville, le type de contrat et l entreprise qui recrute.
+          </p>
+        </div>
+
+        <section id="jobs" className="reveal-soft reveal-delay-2 rounded-xl border border-[#1f2a4d] bg-[#0b1222] p-4 sm:p-8 md:p-11">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
             <h2 className="headline-special headline-accent text-3xl font-black">Offres actives</h2>
             <div className="flex items-center gap-2">
@@ -895,10 +978,10 @@ export default function HomePage() {
               Aucune offre active pour le moment.
             </p>
           ) : (
-            <div className="grid gap-8 md:grid-cols-2">
+            <div className="grid grid-cols-2 gap-4 md:gap-8">
               {visibleJobs.map((job) => (
-                <article key={job.id} className="card-tilt-hover reveal-soft overflow-hidden rounded-2xl border border-[#2a3a68] bg-[#121d38]">
-                  <div className="relative h-36 w-full bg-[#1a2749]">
+                <article key={job.id} className="card-tilt-hover reveal-soft overflow-hidden rounded-xl border border-[#2a3a68] bg-[#121d38]">
+                  <div className="relative h-24 w-full bg-[#1a2749] sm:h-36">
                     <Image
                       src={job.company?.cover_url || DEFAULT_COMPANY_COVER}
                       alt={job.company?.name || "Entreprise"}
@@ -907,27 +990,27 @@ export default function HomePage() {
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-[#0a1120]/80 via-transparent to-transparent" />
                   </div>
-                  <div className="space-y-4 p-6">
-                    <div className="flex items-center justify-between gap-3">
-                      <h3 className="text-lg font-black text-white">{job.title}</h3>
-                      <span className="text-xs text-slate-300">
+                  <div className="space-y-3 p-3 sm:space-y-4 sm:p-6">
+                    <div className="flex items-start justify-between gap-2">
+                      <h3 className="text-sm font-black leading-snug text-white sm:text-lg">{job.title}</h3>
+                      <span className="shrink-0 text-[10px] text-slate-300 sm:text-xs">
                         {job.contract_type || "Contrat"}
                       </span>
                     </div>
-                    <p className="text-base text-slate-300">
+                    <p className="text-xs leading-5 text-slate-300 sm:text-base">
                       {job.company?.name || "Entreprise"} • {job.location_city || "Ville"}
                       {job.is_remote ? " • Remote" : ""}
                     </p>
-                    <div className="flex items-center justify-between gap-2 pt-1">
+                    <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                       <Link
                         href={job.company ? `/entreprises/${job.company.slug}` : "/contact"}
-                        className="text-sm font-semibold text-yellow-300 hover:text-yellow-200"
+                        className="text-[11px] font-semibold text-yellow-300 hover:text-yellow-200 sm:text-sm"
                       >
                         Voir entreprise
                       </Link>
                       <Link
                         href={`/contact?job=${encodeURIComponent(job.id)}`}
-                        className="rounded-full border border-yellow-500 px-4 py-2 text-xs font-semibold text-yellow-300 transition hover:bg-yellow-500 hover:text-[#05070d]"
+                        className="rounded-full border border-yellow-500 px-3 py-1.5 text-[11px] font-semibold text-yellow-300 transition hover:bg-yellow-500 hover:text-[#05070d] sm:px-4 sm:py-2 sm:text-xs"
                       >
                         Postuler
                       </Link>
@@ -945,7 +1028,13 @@ export default function HomePage() {
           ) : null}
         </section>
 
-        <section id="categories" className="reveal-soft reveal-delay-3 rounded-3xl border border-[#1f2a4d] bg-[#0b1222] p-8 md:p-11">
+        <div className="section-bridge reveal-soft reveal-delay-3">
+          <p>
+            Parcourez les secteurs disponibles pour comprendre le paysage des entreprises, comparer les acteurs par domaine et ouvrir directement les fiches les plus utiles.
+          </p>
+        </div>
+
+        <section id="categories" className="reveal-soft reveal-delay-3 rounded-xl border border-[#1f2a4d] bg-[#0b1222] p-4 sm:p-8 md:p-11">
           <div className="mb-7 flex flex-wrap items-center justify-between gap-3">
             <h2 className="headline-special headline-accent text-3xl font-black">
               Entreprises par categorie
@@ -976,29 +1065,25 @@ export default function HomePage() {
 
           <div className="space-y-12">
             {visibleCategorySections.map((section) => {
-              const companiesToRender = isMobileViewport
-                ? section.companies.slice(0, 1)
-                : section.companies;
-
               return (
-              <article key={section.category.id} className="reveal-soft rounded-2xl border border-[#2a3a68] bg-[#101a31] p-7 md:p-8">
-                <div className="mb-5 flex items-start justify-between gap-4">
+              <article key={section.category.id} className="reveal-soft rounded-xl border border-[#2a3a68] bg-[#101a31] p-4 sm:p-7 md:p-8">
+                <div className="mb-5 flex items-start justify-between gap-3 sm:gap-4">
                   <div>
-                    <h3 className="text-2xl font-black text-white">{section.category.name}</h3>
-                    <p className="mt-1 text-base text-slate-300">
+                    <h3 className="text-xl font-black text-white sm:text-2xl">{section.category.name}</h3>
+                    <p className="mt-1 text-sm text-slate-300 sm:text-base">
                       {CATEGORY_DESCRIPTIONS[section.category.slug] || "Decouvrez les entreprises de cette categorie."}
                     </p>
                   </div>
                   <Link
                     href={`/categories/${section.category.slug}`}
-                    className="rounded-full border border-yellow-500 px-4 py-2 text-xs font-semibold text-yellow-300 transition hover:bg-yellow-500 hover:text-[#05070d]"
+                    className="shrink-0 rounded-full border border-yellow-500 px-3 py-2 text-[11px] font-semibold text-yellow-300 transition hover:bg-yellow-500 hover:text-[#05070d] sm:px-4 sm:text-xs"
                   >
                     Voir plus
                   </Link>
                 </div>
 
-                <div className="grid gap-6 md:grid-cols-2 md:gap-8">
-                  {companiesToRender.map((company) => (
+                <div className="grid grid-cols-2 gap-4 md:grid-cols-3 md:gap-8">
+                  {section.companies.slice(0, 3).map((company) => (
                     <CompanyCoverCard key={company.id} company={company} />
                   ))}
                 </div>
@@ -1011,7 +1096,7 @@ export default function HomePage() {
         <section className="reveal-soft reveal-delay-4 grid gap-7 md:grid-cols-2 md:gap-8">
           <Link
             href="/contact"
-            className="card-tilt-hover rounded-3xl border border-[#1f2a4d] bg-[#0a1120] p-7 transition hover:border-yellow-500"
+            className="card-tilt-hover rounded-xl border border-[#1f2a4d] bg-[#0a1120] p-7 transition hover:border-yellow-500"
           >
             <p className="text-xs uppercase tracking-[0.12em] text-yellow-300">Contact</p>
             <h3 className="mt-3 text-3xl font-black text-white">Contact professionnel</h3>
@@ -1022,7 +1107,7 @@ export default function HomePage() {
 
           <Link
             href="/create-site"
-            className="card-tilt-hover rounded-3xl border border-[#1f2a4d] bg-[#0a1120] p-7 transition hover:border-[#21c7b8]"
+            className="card-tilt-hover rounded-xl border border-[#1f2a4d] bg-[#0a1120] p-7 transition hover:border-[#21c7b8]"
           >
             <p className="text-xs uppercase tracking-[0.12em] text-[#21c7b8]">Creation de site</p>
             <h3 className="mt-3 text-3xl font-black text-white">Modeles web et demos live</h3>
@@ -1085,17 +1170,6 @@ export default function HomePage() {
         </div>
       </footer>
 
-      <button
-        type="button"
-        onClick={() => {
-          window.scrollTo({ top: 0, behavior: "smooth" });
-        }}
-        className={`back-to-top-anim fixed bottom-5 right-5 z-50 rounded-full border border-yellow-500 bg-[#05070d]/90 px-4 py-2 text-xs font-bold text-yellow-300 shadow-[0_10px_22px_rgba(0,0,0,0.35)] backdrop-blur transition-all duration-300 hover:bg-yellow-500 hover:text-[#05070d] ${
-          showBackToTop ? "pointer-events-auto translate-y-0 opacity-100" : "pointer-events-none translate-y-3 opacity-0"
-        }`}
-      >
-        Retour haut
-      </button>
     </div>
   );
 }
