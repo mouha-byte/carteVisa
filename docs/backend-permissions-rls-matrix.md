@@ -31,6 +31,7 @@ This document tracks endpoint-level access requirements and the expected Supabas
 | /api/company/applications | GET | Yes | requireEntrepriseActor + optional filters | applications, job_offers | Entreprise can list applications for own company |
 | /api/company/applications/[id]/status | PATCH | Yes | requireEntrepriseActor + ownership + payload validation | applications | Entreprise can update status for own applications |
 | /api/company/applications/[id]/cv | GET | Yes | requireEntrepriseActor + ownership + UUID validation | applications, storage:candidate-cv | Entreprise can download CV only for own company applications |
+| /api/company/applications/[id]/motivation-letter | GET | Yes | requireEntrepriseActor + ownership + UUID validation | applications, storage:candidate-cv | Entreprise can download motivation letter only for own company applications |
 
 ## Super Admin Endpoints
 
@@ -42,7 +43,9 @@ This document tracks endpoint-level access requirements and the expected Supabas
 | /api/admin/companies | POST | Yes | requireSuperAdminActor + payload validation | companies | Super admin create access |
 | /api/admin/companies/[id] | PATCH | Yes | requireSuperAdminActor + UUID/payload validation | companies | Super admin update access (incl. activation/deactivation) |
 | /api/admin/companies/[id] | DELETE | Yes | requireSuperAdminActor + UUID validation | companies | Super admin delete access |
+| /api/admin/applications | GET | Yes | requireSuperAdminActor + optional filters | applications, job_offers, companies | Super admin can list applications |
 | /api/admin/applications/[id]/cv | GET | Yes | requireSuperAdminActor + UUID validation | applications, storage:candidate-cv | Super admin can download CV for any application |
+| /api/admin/applications/[id]/motivation-letter | GET | Yes | requireSuperAdminActor + UUID validation | applications, storage:candidate-cv | Super admin can download motivation letter for any application |
 
 ## Notes for Sprint 6
 
